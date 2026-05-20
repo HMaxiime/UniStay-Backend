@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express'
-import { registerUser, loginUser } from './service.js'
-import type { AuthRequest } from '../../middleware/auth.js'
+import { registerUser, loginUser } from '../utils/auth.service.js'
+import type { AuthRequest } from '../middleware/auth.js'
 
 const ALLOWED_ROLES = ['STUDENT', 'HOST', 'EMPLOYER']
 

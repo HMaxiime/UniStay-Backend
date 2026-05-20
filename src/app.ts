@@ -1,16 +1,14 @@
-import express from 'express'
-import dotenv from 'dotenv'
-import authRoutes from './modules/auth/routes.js'
+import "dotenv/config";
+import express from "express";
+import authRoutes from "./routes/auth.routes.js";
 
-dotenv.config()
+const app = express();
 
-const app = express()
+app.use(express.json());
+app.use("/api/auth", authRoutes);
 
-app.use(express.json())
-app.use('/api/auth', authRoutes)
+app.get("/", (_req, res) => {
+  res.json({ message: "UniStay+ API is running" });
+});
 
-app.get('/', (req, res) => {
-  res.json({ message: 'UniStay+ API is running' })
-})
-
-export default app
+export default app;
