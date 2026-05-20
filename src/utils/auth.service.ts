@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { PrismaClient, Role } from '@prisma/client'
+import { Role } from '@prisma/client'
+import prisma from '../config/db.config.js'
+import { config } from '../config/app.config.js'
 
-const prisma = new PrismaClient()
-
-const JWT_SECRET = process.env.JWT_SECRET || 'mysecretkey123'
+const JWT_SECRET = config.jwtSecret
 
 export const registerUser = async (data: {
   fullName: string
@@ -14,15 +14,11 @@ export const registerUser = async (data: {
   location?: string | null
   role: Role
 }) => {
-  const existing = await prisma.user.findUnique({
-    where: { email: data.email },
-  })
+  const existing = await prisma.user.findUnique({ where: { email: data.email } })
 
-  if (existing) {
-    throw new Error('Email already in use')
-  }
+  if (existing) throw new Error('Email already in use')
 
-  const hashedPassword = await bcrypt.hash(data.password, 10)
+  const hashedPassword = await bcrypt.hash(data.password, config.bcryptRounds)
 
   const user = await prisma.user.create({
     data: {
@@ -38,23 +34,14 @@ export const registerUser = async (data: {
   return { id: user.id, email: user.email, role: user.role }
 }
 
-export const loginUser = async (data: {
-  email: string
-  password: string
-}) => {
-  const user = await prisma.user.findUnique({
-    where: { email: data.email },
-  })
+export const loginUser = async (data: { email: string; password: string }) => {
+  const user = await prisma.user.findUnique({ where: { email: data.email } })
 
-  if (!user) {
-    throw new Error('Invalid email or password')
-  }
+  if (!user) throw new Error('Invalid email or password')
 
   const isMatch = await bcrypt.compare(data.password, user.password)
 
-  if (!isMatch) {
-    throw new Error('Invalid email or password')
-  }
+  if (!isMatch) throw new Error('Invalid email or password')
 
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
