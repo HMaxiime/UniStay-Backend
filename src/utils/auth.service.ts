@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { Role } from '@prisma/client'
-import prisma from '../config/db.config.js'
-import { config } from '../config/app.config.js'
+import prisma from '../config/prisma.js'
 
-const JWT_SECRET = config.jwtSecret
+const JWT_SECRET = process.env.JWT_SECRET || 'mysecretkey123'
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 10)
 
 export const registerUser = async (data: {
   fullName: string
@@ -18,7 +18,7 @@ export const registerUser = async (data: {
 
   if (existing) throw new Error('Email already in use')
 
-  const hashedPassword = await bcrypt.hash(data.password, config.bcryptRounds)
+  const hashedPassword = await bcrypt.hash(data.password, BCRYPT_ROUNDS)
 
   const user = await prisma.user.create({
     data: {

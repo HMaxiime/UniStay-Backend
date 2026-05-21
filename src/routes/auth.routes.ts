@@ -1,13 +1,12 @@
-import { Router } from 'express'
+import express, { type RequestHandler } from "express";
 import { register, login, getMe } from '../controllers/auth.controller.js'
-import { authenticate } from '../middleware/auth.js'
-import { validate } from '../middleware/validate.js'
-import { registerSchema, loginSchema } from '../validators/auth.validator.js'
+import {authenticate}  from '../middleware/auth.middleware.js'
 
-const router = Router()
 
-router.post('/register', validate(registerSchema), register)
-router.post('/login', validate(loginSchema), login)
-router.get('/me', authenticate, getMe)
+const router = express.Router()
+
+router.post('/register', register)
+router.post('/login', login)
+router.get('/me', authenticate as RequestHandler, getMe)
 
 export default router
