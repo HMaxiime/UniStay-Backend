@@ -1,6 +1,6 @@
-import { prisma } from "../lib/prisma.js";
-import type { Request, Response } from "express";
-import type { AuthRequest } from "../middleware/auth.js";
+import { prisma } from "../../lib/prisma.js";
+import type {Request, Response } from "express";
+import type { AuthRequest } from "../../middleware/auth.js";
 
 // ─── GET ALL LISTINGS (with filters) ────────────────────────────────────────
 export const getListings = async (req: AuthRequest, res: Response) => {
@@ -18,7 +18,7 @@ export const getListings = async (req: AuthRequest, res: Response) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     const filters: any = {
-      verificationStatus: "VERIFIED", // only show verified listings
+      verification_status: "VERIFIED", // only show verified listings
     };
 
     if (location) {
@@ -48,10 +48,10 @@ export const getListings = async (req: AuthRequest, res: Response) => {
         where: filters,
         skip,
         take: Number(limit),
-        orderBy: { createdAt: "desc" },
+        orderBy: { created_at: "desc" },
         include: {
           host: {
-            select: { id: true, fullName: true, email: true, phone: true },
+            select: { id: true, full_name: true, email: true, phone: true },
           },
         },
       }),
@@ -79,15 +79,11 @@ export const getListingById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
-    }
-
     const listing = await prisma.housing.findUnique({
-      where: { id: String(id) },
+      where: { id },
       include: {
         host: {
-          select: { id: true, fullName: true, email: true, phone: true },
+          select: { id: true, full_name: true, email: true, phone: true },
         },
       },
     });
@@ -111,10 +107,6 @@ export const createListing = async (req: AuthRequest, res: Response) => {
 
     if (userRole !== "HOST" && userRole !== "ADMIN") {
       return res.status(403).json({ success: false, message: "Only hosts can create listings" });
-    }
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
     }
 
     const {
@@ -145,8 +137,8 @@ export const createListing = async (req: AuthRequest, res: Response) => {
         amenities: amenities ?? [],
         images: images ?? [],
         availability: availability ?? true,
-        hostId: userId,
-        verificationStatus: "PENDING", // requires admin approval per SRS
+        host_id: userId!,
+        verification_status: "PENDING", // requires admin approval per SRS
       },
     });
 
@@ -168,18 +160,14 @@ export const updateListing = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
-    }
-
-    const existing = await prisma.housing.findUnique({ where: { id: String(id) } });
+    const existing = await prisma.housing.findUnique({ where: { id } });
 
     if (!existing) {
       return res.status(404).json({ success: false, message: "Listing not found" });
     }
 
     // Only the owner host or an admin can update
-    if (userRole !== "ADMIN" && existing.hostId !== userId) {
+    if (userRole !== "ADMIN" && existing.host_id !== userId) {
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
@@ -195,7 +183,7 @@ export const updateListing = async (req: AuthRequest, res: Response) => {
     } = req.body;
 
     const updated = await prisma.housing.update({
-      where: { id: String(id) },
+      where: { id },
       data: {
         ...(title && { title }),
         ...(description !== undefined && { description }),
@@ -206,7 +194,7 @@ export const updateListing = async (req: AuthRequest, res: Response) => {
         ...(images && { images }),
         ...(availability !== undefined && { availability }),
         // Reset to PENDING if a non-admin edits (re-verification required)
-        ...(userRole !== "ADMIN" && { verificationStatus: "PENDING" }),
+        ...(userRole !== "ADMIN" && { verification_status: "PENDING" }),
       },
     });
 
@@ -224,21 +212,17 @@ export const deleteListing = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
-    }
-
-    const existing = await prisma.housing.findUnique({ where: { id: String(id) } });
+    const existing = await prisma.housing.findUnique({ where: { id } });
 
     if (!existing) {
       return res.status(404).json({ success: false, message: "Listing not found" });
     }
 
-    if (userRole !== "ADMIN" && existing.hostId !== userId) {
+    if (userRole !== "ADMIN" && existing.host_id !== userId) {
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
-    await prisma.housing.delete({ where: { id: String(id) } });
+    await prisma.housing.delete({ where: { id } });
 
     return res.status(200).json({ success: true, message: "Listing deleted" });
   } catch (error) {
@@ -252,10 +236,6 @@ export const verifyListing = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userRole = req.user?.role;
-
-    if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
-    }
 
     if (userRole !== "ADMIN") {
       return res.status(403).json({ success: false, message: "Admin access required" });
@@ -271,8 +251,8 @@ export const verifyListing = async (req: AuthRequest, res: Response) => {
     }
 
     const listing = await prisma.housing.update({
-      where: { id: String(id) },
-      data: { verificationStatus: status },
+      where: { id },
+      data: { verification_status: status },
     });
 
     return res.status(200).json({
@@ -291,13 +271,9 @@ export const getMyListings = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
 
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
-    }
-
     const listings = await prisma.housing.findMany({
-      where: { hostId: userId },
-      orderBy: { createdAt: "desc" },
+      where: { host_id: userId },
+      orderBy: { created_at: "desc" },
     });
 
     return res.status(200).json({ success: true, data: listings });
@@ -312,13 +288,9 @@ export const getRoommateMatches = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
 
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
-    }
-
     // Find listings the current user has booked/applied for
     const userBooking = await prisma.booking.findFirst({
-      where: { userId: userId, status: "CONFIRMED" },
+      where: { user_id: userId, status: "ACTIVE" },
       include: { housing: true },
     });
 
@@ -332,13 +304,13 @@ export const getRoommateMatches = async (req: AuthRequest, res: Response) => {
     // Find other students in the same listing
     const matches = await prisma.booking.findMany({
       where: {
-        housingId: userBooking.housingId,
-        userId: { not: userId },
-        status: "CONFIRMED",
+        housing_id: userBooking.housing_id,
+        user_id: { not: userId },
+        status: "ACTIVE",
       },
       include: {
         user: {
-          select: { id: true, fullName: true, location: true },
+          select: { id: true, full_name: true, location: true, skills_profile: true },
         },
       },
     });
@@ -356,21 +328,13 @@ export const bookListing = async (req: AuthRequest, res: Response) => {
     const { id } = req.params; // housing id
     const userId = req.user?.id;
 
-    if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
-    }
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
-    }
-
-    const listing = await prisma.housing.findUnique({ where: { id: String(id) } });
+    const listing = await prisma.housing.findUnique({ where: { id } });
 
     if (!listing) {
       return res.status(404).json({ success: false, message: "Listing not found" });
     }
 
-    if (listing.verificationStatus !== "VERIFIED") {
+    if (listing.verification_status !== "VERIFIED") {
       return res.status(400).json({ success: false, message: "Listing is not verified" });
     }
 
@@ -380,7 +344,7 @@ export const bookListing = async (req: AuthRequest, res: Response) => {
 
     // Prevent double booking
     const existing = await prisma.booking.findFirst({
-      where: { userId: userId, housingId: String(id), status: "CONFIRMED" },
+      where: { user_id: userId, housing_id: id, status: "ACTIVE" },
     });
 
     if (existing) {
@@ -389,11 +353,9 @@ export const bookListing = async (req: AuthRequest, res: Response) => {
 
     const booking = await prisma.booking.create({
       data: {
-        userId: userId,
-        housingId: String(id),
-        status: "CONFIRMED",
-        checkIn: new Date(),
-        checkOut: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days check-out per schema requirements
+        user_id: userId!,
+        housing_id: id,
+        status: "ACTIVE",
       },
     });
 

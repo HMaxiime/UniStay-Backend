@@ -1,5 +1,4 @@
 import prisma from "../config/prisma.js";
-
 import type { Request, Response } from "express";
 import { createCourseSchema } from "../validators/course.validator.js";
 
@@ -73,5 +72,19 @@ export async function deleteCourse(req: Request, res: Response) {
   } catch (error) {
     console.error("Error deleting course:", error);
     res.status(500).json({ error: "Failed to delete course" });
+  }
+}
+
+export async function publishCourse(req: Request, res: Response) {
+  try {
+    const courseId = req.params.id as string;
+    const course = await prisma.course.update({
+      where: { id: courseId },
+      data: { isPublished: true }
+    });
+    res.json(course);
+  } catch (error) {
+    console.error("Error publishing course:", error);
+    res.status(500).json({ error: "Failed to publish course" });
   }
 }
