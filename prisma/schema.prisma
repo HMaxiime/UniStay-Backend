@@ -6,7 +6,9 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── ENUMS ───────────────────────────────────────────
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
 
 enum Role {
   STUDENT
@@ -45,25 +47,55 @@ enum BookingStatus {
   CANCELLED
 }
 
-// ─── MODELS ──────────────────────────────────────────
+enum MaterialType {
+  VIDEO
+  PDF
+  ARTICLE
+  QUIZ
+}
+
+enum AssignmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+//////////////////////////////////////////////////////
+// USERS
+//////////////////////////////////////////////////////
 
 model User {
-  id           String   @id @default(uuid())
-  fullName     String
-  email        String   @unique
-  phone        String?
-  password     String
-  role         Role     @default(STUDENT)
-  location     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(uuid())
+  fullName  String
+  email     String   @unique
+  phone     String?
+  password  String
+  role      Role     @default(STUDENT)
+  location  String?
 
-  housings     Housing[]
-  jobs         Job[]
-  applications Application[]
-  userSkills   UserSkill[]
-  bookings     Booking[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Housing
+  housings  Housing[]
+  bookings  Booking[]
+
+  // Jobs
+  jobs          Job[]
+  applications  Application[]
+
+  // Skills
+  userSkills    UserSkill[]
+
+  // Learning
+  enrollments        Enrollment[]
+  certificates       Certificate[]
+  assignmentResults  AssignmentResult[]
 }
+
+//////////////////////////////////////////////////////
+// HOUSING
+//////////////////////////////////////////////////////
 
 model Housing {
   id                 String             @id @default(uuid())
@@ -72,80 +104,318 @@ model Housing {
   price              Float
   availability       Boolean            @default(true)
   verificationStatus VerificationStatus @default(PENDING)
-  hostId             String
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
 
-  host     User      @relation(fields: [hostId], references: [id])
-  bookings Booking[]
+  hostId             String
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  host               User @relation(fields: [hostId], references: [id])
+
+  bookings           Booking[]
 }
+
+model Booking {
+  id          String        @id @default(uuid())
+  userId      String
+  housingId   String
+
+  status      BookingStatus @default(PENDING)
+
+  checkIn     DateTime
+  checkOut    DateTime
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User    @relation(fields: [userId], references: [id])
+  housing     Housing @relation(fields: [housingId], references: [id])
+}
+
+//////////////////////////////////////////////////////
+// JOBS
+//////////////////////////////////////////////////////
 
 model Job {
-  id           String       @id @default(uuid())
-  title        String
-  location     String
-  salary       Float
-  scheduleType ScheduleType
-  employerId   String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id            String       @id @default(uuid())
+  title         String
+  location      String
+  salary        Float
+  scheduleType  ScheduleType
 
-  employer     User          @relation(fields: [employerId], references: [id])
-  applications Application[]
-  jobSkills    JobSkill[]
+  employerId    String
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employer       User @relation(fields: [employerId], references: [id])
+
+  applications   Application[]
+  jobSkills      JobSkill[]
 }
 
-model Skill {
-  id       String     @id @default(uuid())
-  name     String
-  category String
-  level    SkillLevel
+model Application {
+  id          String            @id @default(uuid())
+  userId      String
+  jobId       String
 
-  userSkills UserSkill[]
-  jobSkills  JobSkill[]
+  status      ApplicationStatus @default(PENDING)
+
+  createdAt   DateTime @default(now())
+
+  user        User @relation(fields: [userId], references: [id])
+  job         Job  @relation(fields: [jobId], references: [id])
+}
+
+//////////////////////////////////////////////////////
+// SKILLS
+//////////////////////////////////////////////////////
+
+model Skill {
+  id          String     @id @default(uuid())
+  name        String
+  category    String
+  level       SkillLevel
+
+  userSkills  UserSkill[]
+  jobSkills   JobSkill[]
+  materials   MaterialSkill[]
+  assignments Assignment[]
 }
 
 model UserSkill {
   id               String   @id @default(uuid())
   userId           String
   skillId          String
+
   completionStatus Boolean  @default(false)
+
   createdAt        DateTime @default(now())
 
-  user  User  @relation(fields: [userId], references: [id])
-  skill Skill @relation(fields: [skillId], references: [id])
+  user             User  @relation(fields: [userId], references: [id])
+  skill            Skill @relation(fields: [skillId], references: [id])
+
+  @@unique([userId, skillId])
 }
 
 model JobSkill {
-  id      String @id @default(uuid())
-  jobId   String
-  skillId String
-
-  job   Job   @relation(fields: [jobId], references: [id])
-  skill Skill @relation(fields: [skillId], references: [id])
-}
-
-model Application {
-  id        String            @id @default(uuid())
-  userId    String
+  id        String @id @default(uuid())
   jobId     String
-  status    ApplicationStatus @default(PENDING)
-  createdAt DateTime          @default(now())
+  skillId   String
 
-  user User @relation(fields: [userId], references: [id])
-  job  Job  @relation(fields: [jobId], references: [id])
+  job       Job   @relation(fields: [jobId], references: [id])
+  skill     Skill @relation(fields: [skillId], references: [id])
+
+  @@unique([jobId, skillId])
 }
 
-model Booking {
-  id        String        @id @default(uuid())
-  userId    String
-  housingId String
-  status    BookingStatus @default(PENDING)
-  checkIn   DateTime
-  checkOut  DateTime
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+//////////////////////////////////////////////////////
+// LEARNING COURSES
+//////////////////////////////////////////////////////
 
-  user    User    @relation(fields: [userId], references: [id])
-  housing Housing @relation(fields: [housingId], references: [id])
+model Course {
+  id            String   @id @default(uuid())
+  title         String
+  description   String?
+  thumbnail     String?
+  category      String?
+
+  uploadedBy    String
+
+  isPublished   Boolean @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  materials     Material[]
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+}
+
+model Enrollment {
+  id                  String   @id @default(uuid())
+
+  userId              String
+  courseId            String
+
+  progress            Float    @default(0)
+
+  completedMaterials  Int      @default(0)
+
+  enrolledAt          DateTime @default(now())
+
+  user                User   @relation(fields: [userId], references: [id])
+  course              Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+//////////////////////////////////////////////////////
+// LEARNING MATERIALS
+//////////////////////////////////////////////////////
+
+model Material {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+
+  type        MaterialType
+
+  url         String
+
+  uploadedBy  String // admin id
+
+  courseId    String?
+
+  duration    Int? // minutes
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course      Course? @relation(fields: [courseId], references: [id])
+
+  skills      MaterialSkill[]
+  assignments Assignment[]
+}
+
+// Many-to-many: which skills a material covers
+model MaterialSkill {
+  id          String @id @default(uuid())
+
+  materialId  String
+  skillId     String
+
+  material    Material @relation(fields: [materialId], references: [id])
+  skill       Skill    @relation(fields: [skillId], references: [id])
+
+  @@unique([materialId, skillId])
+}
+
+//////////////////////////////////////////////////////
+// ASSIGNMENTS / EXAMS
+//////////////////////////////////////////////////////
+
+model Assignment {
+  id            String   @id @default(uuid())
+
+  title         String
+
+  materialId    String
+
+  skillId       String
+
+  isStandalone  Boolean  @default(false)
+
+  timeLimit     Int? // minutes
+
+  questionCount Int
+
+  passingScore  Int      @default(70)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  material      Material @relation(fields: [materialId], references: [id])
+
+  skill         Skill    @relation(fields: [skillId], references: [id])
+
+  questions     Question[]
+
+  results       AssignmentResult[]
+}
+
+// A single question in the question pool for an assignment
+model Question {
+  id            String   @id @default(uuid())
+
+  assignmentId  String
+
+  text          String
+
+  createdAt     DateTime @default(now())
+
+  assignment    Assignment @relation(fields: [assignmentId], references: [id])
+
+  options       Option[]
+
+  answers       StudentAnswer[]
+}
+
+// One answer choice for a question
+model Option {
+  id              String  @id @default(uuid())
+
+  questionId      String
+
+  text            String
+
+  isCorrect       Boolean @default(false)
+
+  question        Question @relation(fields: [questionId], references: [id])
+
+  studentAnswers  StudentAnswer[]
+}
+
+//////////////////////////////////////////////////////
+// STUDENT RESULTS
+//////////////////////////////////////////////////////
+
+model AssignmentResult {
+  id             String           @id @default(uuid())
+
+  userId         String
+  assignmentId   String
+
+  score          Int
+
+  status         AssignmentStatus @default(NOT_STARTED)
+
+  startedAt      DateTime @default(now())
+
+  completedAt    DateTime?
+
+  user           User       @relation(fields: [userId], references: [id])
+
+  assignment     Assignment @relation(fields: [assignmentId], references: [id])
+
+  answers        StudentAnswer[]
+}
+
+// Records the selected answer by the student
+model StudentAnswer {
+  id                   String @id @default(uuid())
+
+  assignmentResultId   String
+
+  questionId           String
+
+  selectedOptionId     String
+
+  assignmentResult     AssignmentResult @relation(fields: [assignmentResultId], references: [id])
+
+  question             Question @relation(fields: [questionId], references: [id])
+
+  selectedOption       Option @relation(fields: [selectedOptionId], references: [id])
+}
+
+//////////////////////////////////////////////////////
+// CERTIFICATES
+//////////////////////////////////////////////////////
+
+model Certificate {
+  id              String   @id @default(uuid())
+
+  userId          String
+
+  courseId        String
+
+  certificateUrl  String?
+
+  issuedAt        DateTime @default(now())
+
+  user            User   @relation(fields: [userId], references: [id])
+
+  course          Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
 }
