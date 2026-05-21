@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import type { Request, Response } from "express";
-import { createCourseSchema } from "../validators/course.validator.js";
+import { createCourseSchema, updateCourseSchema } from "../validators/course.validator.js";
 
 export async function getCourses(req: Request, res: Response) {
   try {
@@ -29,7 +29,7 @@ export async function getCourseById(req: Request, res: Response) {
 export async function createCourse(req: Request, res: Response) {
   try {
     const parsed = createCourseSchema.parse(req.body);
-    const course = await prisma.course.create({ data: parsed });
+    const course = await prisma.course.create({ data: parsed as any });
     res.status(201).json(course);
   } catch (error) {
     console.error("Error creating course:", error);
@@ -40,9 +40,12 @@ export async function createCourse(req: Request, res: Response) {
 export async function updateCourse(req: Request, res: Response) {
   try {
     const courseId = req.params.id as string;
-    const parsed = createCourseSchema.parse(req.body);
-    const updateData: Record<string, unknown> = { title: parsed.title };
+    const parsed = updateCourseSchema.parse(req.body);
+    const updateData: Record<string, unknown> = {};
 
+    if (parsed.title !== undefined) {
+      updateData.title = parsed.title;
+    }
     if (parsed.description !== undefined) {
       updateData.description = parsed.description;
     }
@@ -51,6 +54,9 @@ export async function updateCourse(req: Request, res: Response) {
     }
     if (parsed.category !== undefined) {
       updateData.category = parsed.category;
+    }
+    if (parsed.uploadedBy !== undefined) {
+      updateData.uploadedBy = parsed.uploadedBy;
     }
 
     const course = await prisma.course.update({

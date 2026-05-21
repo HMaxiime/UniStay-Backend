@@ -104,7 +104,7 @@ model Housing {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  host     User      @relation(fields: [hostId], references: [id])
+  host     User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
   bookings Booking[]
 }
 
@@ -118,8 +118,8 @@ model Booking {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id])
-  housing Housing @relation(fields: [housingId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  housing Housing @relation(fields: [housingId], references: [id], onDelete: Cascade)
 }
 
 //////////////////////////////////////////////////////
@@ -136,7 +136,7 @@ model Job {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  employer     User          @relation(fields: [employerId], references: [id])
+  employer     User          @relation(fields: [employerId], references: [id], onDelete: Cascade)
   applications Application[]
   jobSkills    JobSkill[]
 }
@@ -148,8 +148,8 @@ model Application {
   status    ApplicationStatus @default(PENDING)
   createdAt DateTime          @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  job  Job  @relation(fields: [jobId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
 //////////////////////////////////////////////////////
@@ -175,8 +175,8 @@ model UserSkill {
   completionStatus Boolean  @default(false)
   createdAt        DateTime @default(now())
 
-  user  User  @relation(fields: [userId], references: [id])
-  skill Skill @relation(fields: [skillId], references: [id])
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([userId, skillId])
 }
@@ -186,8 +186,8 @@ model JobSkill {
   jobId   String
   skillId String
 
-  job   Job   @relation(fields: [jobId], references: [id])
-  skill Skill @relation(fields: [skillId], references: [id])
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([jobId, skillId])
 }
@@ -220,8 +220,8 @@ model Enrollment {
   completedMaterials Int      @default(0)
   enrolledAt         DateTime @default(now())
 
-  user   User   @relation(fields: [userId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -235,16 +235,29 @@ model Material {
   title       String
   description String?
   type        MaterialType
-  url         String
   uploadedBy  String
   courseId    String?
   duration    Int?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  course      Course?         @relation(fields: [courseId], references: [id])
+  course      Course?         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  files       MaterialFile[]
   skills      MaterialSkill[]
   assignments Assignment[]
+}
+
+model MaterialFile {
+  id           String   @id @default(uuid())
+  url          String
+  publicId     String   @unique
+  materialId   String
+  resourceType String
+  mimeType     String
+  originalName String?
+  format       String?
+  bytes        Int?
+  material     Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
 }
 
 model MaterialSkill {
@@ -252,8 +265,8 @@ model MaterialSkill {
   materialId String
   skillId    String
 
-  material Material @relation(fields: [materialId], references: [id])
-  skill    Skill    @relation(fields: [skillId], references: [id])
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  skill    Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([materialId, skillId])
 }
@@ -274,8 +287,8 @@ model Assignment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  material  Material           @relation(fields: [materialId], references: [id])
-  skill     Skill              @relation(fields: [skillId], references: [id])
+  material  Material           @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  skill     Skill              @relation(fields: [skillId], references: [id], onDelete: Cascade)
   questions Question[]
   results   AssignmentResult[]
 }
@@ -286,7 +299,7 @@ model Question {
   text         String
   createdAt    DateTime @default(now())
 
-  assignment Assignment      @relation(fields: [assignmentId], references: [id])
+  assignment Assignment      @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   options    Option[]
   answers    StudentAnswer[]
 }
@@ -297,7 +310,7 @@ model Option {
   text       String
   isCorrect  Boolean @default(false)
 
-  question       Question        @relation(fields: [questionId], references: [id])
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
   studentAnswers StudentAnswer[]
 }
 
@@ -314,8 +327,8 @@ model AssignmentResult {
   startedAt    DateTime         @default(now())
   completedAt  DateTime?
 
-  user       User            @relation(fields: [userId], references: [id])
-  assignment Assignment      @relation(fields: [assignmentId], references: [id])
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignment Assignment      @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   answers    StudentAnswer[]
 }
 
@@ -325,9 +338,9 @@ model StudentAnswer {
   questionId         String
   selectedOptionId   String
 
-  assignmentResult AssignmentResult @relation(fields: [assignmentResultId], references: [id])
-  question         Question         @relation(fields: [questionId], references: [id])
-  selectedOption   Option           @relation(fields: [selectedOptionId], references: [id])
+  assignmentResult AssignmentResult @relation(fields: [assignmentResultId], references: [id], onDelete: Cascade)
+  question         Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption   Option           @relation(fields: [selectedOptionId], references: [id], onDelete: Cascade)
 }
 
 //////////////////////////////////////////////////////
@@ -341,8 +354,8 @@ model Certificate {
   certificateUrl String?
   issuedAt       DateTime @default(now())
 
-  user   User   @relation(fields: [userId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }

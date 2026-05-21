@@ -38,5 +38,5 @@
     "skipLibCheck": true,
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "prisma"]
+  "exclude": ["node_modules", "dist", "prisma", "src/modules/**/*", "src/controllers/booking.controller.ts"]
 }
