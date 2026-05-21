@@ -1,11 +1,12 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
-import { PrismaClient, Role } from '@prisma/client'
-import { sendResetEmail } from '../../config/email.js'
+import { Role } from '@prisma/client'
+import prisma from '../config/db.config.js'
+import { config } from '../config/app.config.js'
+import { sendResetEmail } from '../config/email.js'
 
-const prisma = new PrismaClient()
-const JWT_SECRET = process.env.JWT_SECRET || 'mysecretkey123'
+const JWT_SECRET = config.jwtSecret
 
 export const registerUser = async (data: {
   fullName: string
@@ -15,13 +16,10 @@ export const registerUser = async (data: {
   location?: string | null
   role: Role
 }) => {
-  const existing = await prisma.user.findUnique({
-    where: { email: data.email },
-  })
-
+  const existing = await prisma.user.findUnique({ where: { email: data.email } })
   if (existing) throw new Error('Email already in use')
 
-  const hashedPassword = await bcrypt.hash(data.password, 10)
+  const hashedPassword = await bcrypt.hash(data.password, config.bcryptRounds)
 
   const user = await prisma.user.create({
     data: {
@@ -37,14 +35,8 @@ export const registerUser = async (data: {
   return { id: user.id, email: user.email, role: user.role }
 }
 
-export const loginUser = async (data: {
-  email: string
-  password: string
-}) => {
-  const user = await prisma.user.findUnique({
-    where: { email: data.email },
-  })
-
+export const loginUser = async (data: { email: string; password: string }) => {
+  const user = await prisma.user.findUnique({ where: { email: data.email } })
   if (!user) throw new Error('Invalid email or password')
 
   const isMatch = await bcrypt.compare(data.password, user.password)
@@ -61,11 +53,7 @@ export const loginUser = async (data: {
 
 export const updateProfile = async (
   userId: string,
-  data: {
-    fullName?: string
-    phone?: string | null
-    location?: string | null
-  }
+  data: { fullName?: string; phone?: string | null; location?: string | null }
 ) => {
   const user = await prisma.user.update({
     where: { id: userId },
@@ -80,7 +68,6 @@ export const updateProfile = async (
       role: true,
     },
   })
-
   return user
 }
 
@@ -94,7 +81,7 @@ export const changePassword = async (
   const isMatch = await bcrypt.compare(data.oldPassword, user.password)
   if (!isMatch) throw new Error('Old password is incorrect')
 
-  const hashed = await bcrypt.hash(data.newPassword, 10)
+  const hashed = await bcrypt.hash(data.newPassword, config.bcryptRounds)
 
   await prisma.user.update({
     where: { id: userId },
@@ -106,7 +93,6 @@ export const changePassword = async (
 
 export const forgotPassword = async (email: string) => {
   const user = await prisma.user.findUnique({ where: { email } })
-
   if (!user) return { message: 'If that email exists, a reset link has been sent' }
 
   const resetToken = crypto.randomBytes(32).toString('hex')
@@ -118,7 +104,6 @@ export const forgotPassword = async (email: string) => {
   })
 
   await sendResetEmail(email, resetToken)
-
   return { message: 'If that email exists, a reset link has been sent' }
 }
 
@@ -132,15 +117,11 @@ export const resetPassword = async (token: string, newPassword: string) => {
 
   if (!user) throw new Error('Invalid or expired reset token')
 
-  const hashed = await bcrypt.hash(newPassword, 10)
+  const hashed = await bcrypt.hash(newPassword, config.bcryptRounds)
 
   await prisma.user.update({
     where: { id: user.id },
-    data: {
-      password: hashed,
-      resetToken: null,
-      resetTokenExpiry: null,
-    } as any,
+    data: { password: hashed, resetToken: null, resetTokenExpiry: null } as any,
   })
 
   return { message: 'Password reset successfully' }
@@ -160,7 +141,6 @@ export const getUserById = async (userId: string) => {
       createdAt: true,
     },
   })
-
   if (!user) throw new Error('User not found')
   return user
 }

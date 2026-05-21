@@ -6,7 +6,6 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
 // ─── ENUMS ───────────────────────────────────────────
 
 enum Role {
@@ -46,9 +45,23 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum MaterialType {
+  VIDEO
+  PDF
+  ARTICLE
+  QUIZ
+}
+
+enum AssignmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
 // ─── MODELS ──────────────────────────────────────────
 
-model User {
+
+ model User {
   id                 String    @id @default(uuid())
   fullName           String
   email              String    @unique
@@ -62,11 +75,12 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  housings     Housing[]
-  jobs         Job[]
-  applications Application[]
-  userSkills   UserSkill[]
-  bookings     Booking[]
+  housings          Housing[]
+  jobs              Job[]
+  applications      Application[]
+  userSkills        UserSkill[]
+  bookings          Booking[]
+  assignmentResults AssignmentResult[]
 }
 
 model Housing {
@@ -105,8 +119,10 @@ model Skill {
   category String
   level    SkillLevel
 
-  userSkills UserSkill[]
-  jobSkills  JobSkill[]
+  userSkills  UserSkill[]
+  jobSkills   JobSkill[]
+  materials   MaterialSkill[]
+  assignments Assignment[]
 }
 
 model UserSkill {
@@ -152,4 +168,101 @@ model Booking {
 
   user    User    @relation(fields: [userId], references: [id])
   housing Housing @relation(fields: [housingId], references: [id])
+}
+
+// ─── LEARNING MATERIALS ──────────────────────────────
+
+// A learning resource uploaded by an admin (video, PDF, article, etc.)
+model Material {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  type        MaterialType
+  url         String                // file URL or link
+  uploadedBy  String                // admin user id
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  skills      MaterialSkill[]
+  assignments Assignment[]
+}
+
+// Many-to-many: which skills a material covers
+model MaterialSkill {
+  id         String @id @default(uuid())
+  materialId String
+  skillId    String
+
+  material Material @relation(fields: [materialId], references: [id])
+  skill    Skill    @relation(fields: [skillId], references: [id])
+}
+
+// An assignment = a quiz attached to a material.
+// Admin sets how many questions the student must answer (questionCount),
+// but can upload many more questions into the Question pool.
+model Assignment {
+  id            String   @id @default(uuid())
+  title         String
+  materialId    String               // the material this quiz is attached to
+  skillId       String               // the skill this assignment trains
+  questionCount Int                  // how many questions the student sees per attempt
+  passingScore  Int      @default(70) // minimum % to pass
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  material  Material           @relation(fields: [materialId], references: [id])
+  skill     Skill              @relation(fields: [skillId], references: [id])
+  questions Question[]
+  results   AssignmentResult[]
+}
+
+// A single question in the question pool for an assignment.
+// Admin can add as many as they want; students only see `questionCount` of them.
+model Question {
+  id           String   @id @default(uuid())
+  assignmentId String
+  text         String   // the question text
+  createdAt    DateTime @default(now())
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+  options    Option[]
+  answers    StudentAnswer[]
+}
+
+// One of the 4 answer choices for a question
+model Option {
+  id         String  @id @default(uuid())
+  questionId String
+  text       String  // option label/text
+  isCorrect  Boolean @default(false)
+
+  question      Question        @relation(fields: [questionId], references: [id])
+  studentAnswers StudentAnswer[]
+}
+
+// Tracks a student's full attempt at an assignment
+model AssignmentResult {
+  id           String           @id @default(uuid())
+  userId       String
+  assignmentId String
+  score        Int              // percentage score (0-100)
+  status       AssignmentStatus @default(NOT_STARTED)
+  startedAt    DateTime         @default(now())
+  completedAt  DateTime?
+
+  user        User            @relation(fields: [userId], references: [id])
+  assignment  Assignment      @relation(fields: [assignmentId], references: [id])
+  answers     StudentAnswer[]
+}
+
+// Records which option the student picked for each question in their attempt
+model StudentAnswer {
+  id                 String @id @default(uuid())
+  assignmentResultId String
+  questionId         String
+  selectedOptionId   String
+
+  assignmentResult AssignmentResult @relation(fields: [assignmentResultId], references: [id])
+  question         Question         @relation(fields: [questionId], references: [id])
+  selectedOption   Option           @relation(fields: [selectedOptionId], references: [id])
 }
