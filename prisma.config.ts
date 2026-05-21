@@ -1,5 +1,7 @@
-import { defineConfig } from 'prisma/config'
+import { defineConfig } from "prisma/config"
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
+  datasource: {
+    url: "postgresql://postgres:ruth@localhost:5432/unistay",
+  },
 })
