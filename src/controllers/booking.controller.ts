@@ -1,10 +1,11 @@
 import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
-import type { AuthRequest } from "../middleware/auth.js";
 
 // ─── GET ALL BOOKINGS (Admin) ─────────────────────────────────────────────────
-export const getAllBookings = async (req: AuthRequest, res: Response) => {
+export const getAllBookings = async (req: Request, res: Response) => {
   try {
+    const userId = req.params.userId as string
+    
     if (req.user?.role !== "ADMIN") {
       return res.status(403).json({ success: false, message: "Admin access required" });
     }
@@ -50,9 +51,9 @@ export const getAllBookings = async (req: AuthRequest, res: Response) => {
 };
 
 // ─── GET MY BOOKINGS (Student) ────────────────────────────────────────────────
-export const getMyBookings = async (req: AuthRequest, res: Response) => {
+export const getMyBookings = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.params.userId as string;
     const { status } = req.query;
 
     if (!userId) {
@@ -90,11 +91,11 @@ export const getMyBookings = async (req: AuthRequest, res: Response) => {
 };
 
 // ─── GET SINGLE BOOKING ───────────────────────────────────────────────────────
-export const getBookingById = async (req: AuthRequest, res: Response) => {
+export const getBookingById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
+    const userId = req.params.userId as string;
+    const userRole = req.body;
 
     if (!id) {
       return res.status(400).json({ success: false, message: "Booking ID is required" });
@@ -137,9 +138,9 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
 };
 
 // ─── CREATE BOOKING (Student) ─────────────────────────────────────────────────
-export const createBooking = async (req: AuthRequest, res: Response) => {
+export const createBooking = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.params.id as string;
     const { housing_id, housingId } = req.body;
 
     const targetHousingId = housingId || housing_id;
@@ -207,11 +208,11 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 };
 
 // ─── CANCEL BOOKING (Student / Admin) ────────────────────────────────────────
-export const cancelBooking = async (req: AuthRequest, res: Response) => {
+export const cancelBooking = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
+    const userId = req.params.id as string;
+    const userRole = req.body()
 
     if (!id) {
       return res.status(400).json({ success: false, message: "Booking ID is required" });
@@ -251,11 +252,11 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
 };
 
 // ─── COMPLETE BOOKING (Host / Admin) ─────────────────────────────────────────
-export const completeBooking = async (req: AuthRequest, res: Response) => {
+export const completeBooking = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
+    const userId = req.params.userId as string;
+    const userRole = req.body();
 
     if (!id) {
       return res.status(400).json({ success: false, message: "Booking ID is required" });
@@ -307,11 +308,11 @@ export const completeBooking = async (req: AuthRequest, res: Response) => {
 };
 
 // ─── GET BOOKINGS FOR A LISTING (Host / Admin) ────────────────────────────────
-export const getBookingsByListing = async (req: AuthRequest, res: Response) => {
+export const getBookingsByListing = async (req: Request, res: Response) => {
   try {
     const { housing_id, housingId } = req.params;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
+    const userId = req.params.userId as string;
+    const userRole = req.body();
 
     const targetHousingId = housingId || housing_id;
 
