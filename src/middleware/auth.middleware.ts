@@ -1,25 +1,37 @@
 import jwt from "jsonwebtoken";
 import { configDotenv } from "dotenv";
-import type { NextFunction , Request , Response } from "express";
-export interface AuthRequest extends Request {
-  userId: string;
-  role: string;
-}
+import type { NextFunction, Request, Response } from "express";
+
 configDotenv();
+
+// ─── Extend Express Request to carry authenticated user ───────────────────────
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        role: string;
+      };
+    }
+  }
+}
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-export function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
+// ─── authenticate ─────────────────────────────────────────────────────────────
+// Verifies the Bearer token and attaches { id, role } to req.user.
+// All downstream middleware and controllers read from req.user.
+export function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-    if (!token) {   
+
+  if (!token) {
     return res.status(401).json({ error: "No token provided" });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
-req.userId = decoded.id;
-req.role = decoded.role;
+    req.user = { id: decoded.id, role: decoded.role };
     next();
   } catch (error) {
     return res.status(403).json({ error: "Invalid token" });
@@ -27,56 +39,43 @@ req.role = decoded.role;
 }
 
 // ─── requireHost ──────────────────────────────────────────────────────────────
-// Must run after authenticate.
-// Returns 403 if the user's role is not HOST.
-
-export function requireHost(req: AuthRequest, res: Response, next: NextFunction) {
-  if (req.role !== "HOST") {
+export function requireHost(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "HOST") {
     return res.status(403).json({ error: "Only hosts can perform this action" });
   }
   next();
 }
 
-// ─── requireStudent ─────────────────────────────────────────────────────────────
-// Must run after authenticate.
-// Returns 403 if the user's role is not Student.
-
-export function requireStudent(req: AuthRequest, res: Response, next: NextFunction) {
-  if (req.role !== "STUDENT") {
-    return res.status(403).json({ error: "Only Students can perform this action" });
+// ─── requireStudent ───────────────────────────────────────────────────────────
+export function requireStudent(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "STUDENT") {
+    return res.status(403).json({ error: "Only students can perform this action" });
   }
   next();
 }
 
-// ─── requireEmployer ─────────────────────────────────────────────────────────────
-// Must run after authenticate.
-// Returns 403 if the user's role is not Employer.
-
-export function requireEmployer(req: AuthRequest, res: Response, next: NextFunction) {
-  if (req.role !== "EMPLOYER") {
-    return res.status(403).json({ error: "Only Employers can perform this action" });
+// ─── requireEmployer ──────────────────────────────────────────────────────────
+export function requireEmployer(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "EMPLOYER") {
+    return res.status(403).json({ error: "Only employers can perform this action" });
   }
   next();
 }
 
 // ─── requireAdmin ─────────────────────────────────────────────────────────────
-// Must run after authenticate.
-// Returns 403 if the user's role is not Admin.
-
-export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
-  if (req.role !== "ADMIN") {
-    return res.status(403).json({ error: "Only Admins can perform this action" });
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "ADMIN") {
+    return res.status(403).json({ error: "Only admins can perform this action" });
   }
   next();
 }
 
-
+// ─── authorize (multi-role) ───────────────────────────────────────────────────
 export function authorize(roles: string[]) {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!roles.includes(req.role)) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Forbidden" });
     }
     next();
-}}
-
-  
+  };
+}
