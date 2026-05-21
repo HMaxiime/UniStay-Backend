@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+
 import authRoutes from "./routes/auth.routes.js";
 import skillsRoutes from "./routes/skills.routes.js";
 <<<<<<< HEAD
@@ -7,6 +8,12 @@ import courseRoutes from "./routes/course.routes.js";
 import materialsRoute from "./routes/materials.routes.js"
 =======
 import courseRoutes from "./routes/courec.routes.js";
+import jobsRoutes from "./routes/jobs.routes.js";
+import jobsModuleRoutes from "./modules/jobs/routes.js";
+
+// optional module-style routes
+import housingsModuleRoutes from "./modules/housing/routes.js";
+import bookingModuleRoutes from "./modules/bookings/routes.js";
 import housingRoutes from "./routes/housing.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 >>>>>>> c0ef9862ae32fef1867024a36edc2800c77d6c99
@@ -14,12 +21,10 @@ import bookingRoutes from "./routes/booking.routes.js";
 const app = express();
 
 app.use(express.json());
+
 app.use("/api/auth", authRoutes);
 app.use("/api/skills", skillsRoutes);
 app.use("/api/courses", courseRoutes);
-<<<<<<< HEAD
-app.use("/api/materials", materialsRoute);
-=======
 app.use("/api/listings", housingRoutes);
 app.use("/api/bookings", bookingRoutes);
 >>>>>>> c0ef9862ae32fef1867024a36edc2800c77d6c99
