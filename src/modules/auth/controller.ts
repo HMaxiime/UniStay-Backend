@@ -3,7 +3,6 @@ import {
   registerUser,
   loginUser,
   updateProfile,
-  updateProfilePicture,
   changePassword,
   forgotPassword,
   resetPassword,
@@ -61,24 +60,6 @@ export const updateProfileHandler = async (req: AuthRequest, res: Response) => {
     const { fullName, phone, location } = req.body
     const user = await updateProfile(req.user!.id, { fullName, phone, location })
     return res.status(200).json({ message: 'Profile updated successfully', user })
-  } catch (error: any) {
-    return res.status(400).json({ message: error.message })
-  }
-}
-
-export const updateProfilePictureHandler = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No image file provided' })
-    }
-
-    const user = await updateProfilePicture(
-      req.user!.id,
-      req.file.buffer,
-      req.file.mimetype
-    )
-
-    return res.status(200).json({ message: 'Profile picture updated', user })
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
   }

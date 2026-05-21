@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { PrismaClient, Role } from '@prisma/client'
-import cloudinary from '../../config/cloudinary.js'
 import { sendResetEmail } from '../../config/email.js'
 
 const prisma = new PrismaClient()
@@ -80,28 +79,6 @@ export const updateProfile = async (
       profilePicture: true,
       role: true,
     },
-  })
-
-  return user
-}
-
-export const updateProfilePicture = async (
-  userId: string,
-  fileBuffer: Buffer,
-  mimeType: string
-) => {
-  const base64 = fileBuffer.toString('base64')
-  const dataUri = `data:${mimeType};base64,${base64}`
-
-  const result = await cloudinary.uploader.upload(dataUri, {
-    folder: 'unistay/profiles',
-    transformation: [{ width: 400, height: 400, crop: 'fill' }],
-  })
-
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: { profilePicture: result.secure_url },
-    select: { id: true, profilePicture: true },
   })
 
   return user
