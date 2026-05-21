@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getAllBookings, getMyBookings, getBookingById, createBooking, cancelBooking, completeBooking, getBookingsByListing, } from "../bookings/controller.js";
 import { authenticate } from "../../middleware/auth.js";
 const router = Router();
-router.use(authenticate); // all booking routes require auth
+router.use(authenticate);
 router.get("/", getAllBookings); // ADMIN
 router.get("/my", getMyBookings); // STUDENT
 router.get("/:id", getBookingById); // STUDENT / HOST / ADMIN

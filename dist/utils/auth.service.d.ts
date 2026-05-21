@@ -7,9 +7,9 @@ export declare const registerUser: (data: {
     location?: string | null;
     role: Role;
 }) => Promise<{
-    id: any;
-    email: any;
-    role: any;
+    id: string;
+    email: string;
+    role: import("@prisma/client").$Enums.Role;
 }>;
 export declare const loginUser: (data: {
     email: string;
@@ -17,9 +17,9 @@ export declare const loginUser: (data: {
 }) => Promise<{
     token: string;
     user: {
-        id: any;
-        email: any;
-        role: any;
+        id: string;
+        email: string;
+        role: import("@prisma/client").$Enums.Role;
     };
 }>;
 //# sourceMappingURL=auth.service.d.ts.map

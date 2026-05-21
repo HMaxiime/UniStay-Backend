@@ -1,24 +1,18 @@
-import {} from "express";
 import { prisma } from "../../lib/prisma.js";
-import { BookingStatus, Role } from "@prisma/client";
 // ─── GET ALL BOOKINGS (Admin) ─────────────────────────────────────────────────
 export const getAllBookings = async (req, res) => {
     try {
-        if (req.user?.role !== Role.ADMIN) {
+        if (req.user?.role !== "ADMIN") {
             return res.status(403).json({ success: false, message: "Admin access required" });
         }
         const { status, page = "1", limit = "10" } = req.query;
         const skip = (Number(page) - 1) * Number(limit);
-        const where = {};
-        if (status) {
-            const upper = String(status).toUpperCase();
-            if (Object.values(BookingStatus).includes(upper)) {
-                where.status = upper;
-            }
-        }
+        const filters = {};
+        if (status)
+            filters.status = String(status).toUpperCase();
         const [bookings, total] = await Promise.all([
             prisma.booking.findMany({
-                where,
+                where: filters,
                 skip,
                 take: Number(limit),
                 orderBy: { created_at: "desc" },
@@ -31,7 +25,7 @@ export const getAllBookings = async (req, res) => {
                     },
                 },
             }),
-            prisma.booking.count({ where }),
+            prisma.booking.count({ where: filters }),
         ]);
         return res.status(200).json({
             success: true,
@@ -54,15 +48,11 @@ export const getMyBookings = async (req, res) => {
     try {
         const userId = req.user?.id;
         const { status } = req.query;
-        const where = { user_id: userId };
-        if (status) {
-            const upper = String(status).toUpperCase();
-            if (Object.values(BookingStatus).includes(upper)) {
-                where.status = upper;
-            }
-        }
+        const filters = { user_id: userId };
+        if (status)
+            filters.status = String(status).toUpperCase();
         const bookings = await prisma.booking.findMany({
-            where,
+            where: filters,
             orderBy: { created_at: "desc" },
             include: {
                 housing: {
@@ -90,7 +80,7 @@ export const getMyBookings = async (req, res) => {
 // ─── GET SINGLE BOOKING ───────────────────────────────────────────────────────
 export const getBookingById = async (req, res) => {
     try {
-        const id = req.params.id;
+        const { id } = req.params;
         const userId = req.user?.id;
         const userRole = req.user?.role;
         const booking = await prisma.booking.findUnique({
@@ -111,9 +101,10 @@ export const getBookingById = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ success: false, message: "Booking not found" });
         }
+        // Students can only view their own bookings; hosts can view bookings on their listings
         const isOwner = booking.user_id === userId;
-        const isHost = booking.housing.host.id === userId; // use included host.id, not host_id
-        const isAdmin = userRole === Role.ADMIN;
+        const isHost = booking.housing.host_id === userId;
+        const isAdmin = userRole === "ADMIN";
         if (!isOwner && !isHost && !isAdmin) {
             return res.status(403).json({ success: false, message: "Unauthorized" });
         }
@@ -142,23 +133,22 @@ export const createBooking = async (req, res) => {
         if (!listing.availability) {
             return res.status(400).json({ success: false, message: "Listing is not available" });
         }
+        // Prevent a host from booking their own listing
         if (listing.host_id === userId) {
             return res.status(400).json({ success: false, message: "You cannot book your own listing" });
         }
+        // Prevent duplicate active booking on the same listing
         const duplicate = await prisma.booking.findFirst({
-            where: { user_id: userId, housing_id, status: BookingStatus.ACTIVE },
+            where: { user_id: userId, housing_id, status: "ACTIVE" },
         });
         if (duplicate) {
-            return res.status(409).json({
-                success: false,
-                message: "You already have an active booking for this listing",
-            });
+            return res.status(409).json({ success: false, message: "You already have an active booking for this listing" });
         }
         const booking = await prisma.booking.create({
             data: {
                 user_id: userId,
                 housing_id,
-                status: BookingStatus.ACTIVE,
+                status: "ACTIVE",
             },
             include: {
                 housing: {
@@ -180,7 +170,7 @@ export const createBooking = async (req, res) => {
 // ─── CANCEL BOOKING (Student / Admin) ────────────────────────────────────────
 export const cancelBooking = async (req, res) => {
     try {
-        const id = req.params.id;
+        const { id } = req.params;
         const userId = req.user?.id;
         const userRole = req.user?.role;
         const booking = await prisma.booking.findUnique({ where: { id } });
@@ -188,21 +178,25 @@ export const cancelBooking = async (req, res) => {
             return res.status(404).json({ success: false, message: "Booking not found" });
         }
         const isOwner = booking.user_id === userId;
-        const isAdmin = userRole === Role.ADMIN;
+        const isAdmin = userRole === "ADMIN";
         if (!isOwner && !isAdmin) {
             return res.status(403).json({ success: false, message: "Unauthorized" });
         }
-        if (booking.status === BookingStatus.CANCELLED) {
+        if (booking.status === "CANCELLED") {
             return res.status(400).json({ success: false, message: "Booking is already cancelled" });
         }
-        if (booking.status === BookingStatus.COMPLETED) {
+        if (booking.status === "COMPLETED") {
             return res.status(400).json({ success: false, message: "Cannot cancel a completed booking" });
         }
         const updated = await prisma.booking.update({
             where: { id },
-            data: { status: BookingStatus.CANCELLED },
+            data: { status: "CANCELLED" },
         });
-        return res.status(200).json({ success: true, message: "Booking cancelled", data: updated });
+        return res.status(200).json({
+            success: true,
+            message: "Booking cancelled",
+            data: updated,
+        });
     }
     catch (error) {
         console.error("cancelBooking error:", error);
@@ -212,29 +206,22 @@ export const cancelBooking = async (req, res) => {
 // ─── COMPLETE BOOKING (Host / Admin) ─────────────────────────────────────────
 export const completeBooking = async (req, res) => {
     try {
-        const id = req.params.id;
+        const { id } = req.params;
         const userId = req.user?.id;
         const userRole = req.user?.role;
         const booking = await prisma.booking.findUnique({
             where: { id },
-            include: {
-                housing: {
-                    select: { id: true, host_id: true }, // explicitly select host_id
-                },
-            },
+            include: { housing: true },
         });
         if (!booking) {
             return res.status(404).json({ success: false, message: "Booking not found" });
         }
         const isHost = booking.housing.host_id === userId;
-        const isAdmin = userRole === Role.ADMIN;
+        const isAdmin = userRole === "ADMIN";
         if (!isHost && !isAdmin) {
-            return res.status(403).json({
-                success: false,
-                message: "Only the host or admin can complete a booking",
-            });
+            return res.status(403).json({ success: false, message: "Only the host or admin can complete a booking" });
         }
-        if (booking.status !== BookingStatus.ACTIVE) {
+        if (booking.status !== "ACTIVE") {
             return res.status(400).json({
                 success: false,
                 message: `Cannot complete a booking with status: ${booking.status}`,
@@ -242,31 +229,35 @@ export const completeBooking = async (req, res) => {
         }
         const updated = await prisma.booking.update({
             where: { id },
-            data: { status: BookingStatus.COMPLETED },
+            data: { status: "COMPLETED" },
         });
         // Mark listing as unavailable once booking is completed
         await prisma.housing.update({
             where: { id: booking.housing_id },
             data: { availability: false },
         });
-        return res.status(200).json({ success: true, message: "Booking completed", data: updated });
+        return res.status(200).json({
+            success: true,
+            message: "Booking completed",
+            data: updated,
+        });
     }
     catch (error) {
         console.error("completeBooking error:", error);
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
-// ─── GET BOOKINGS FOR A LISTING (Host / Admin) ───────────────────────────────
+// ─── GET BOOKINGS FOR A LISTING (Host / Admin) ────────────────────────────────
 export const getBookingsByListing = async (req, res) => {
     try {
-        const housing_id = req.params.housing_id; // matches route param name
+        const { housing_id } = req.params;
         const userId = req.user?.id;
         const userRole = req.user?.role;
         const listing = await prisma.housing.findUnique({ where: { id: housing_id } });
         if (!listing) {
             return res.status(404).json({ success: false, message: "Listing not found" });
         }
-        if (userRole !== Role.ADMIN && listing.host_id !== userId) {
+        if (userRole !== "ADMIN" && listing.host_id !== userId) {
             return res.status(403).json({ success: false, message: "Unauthorized" });
         }
         const bookings = await prisma.booking.findMany({
