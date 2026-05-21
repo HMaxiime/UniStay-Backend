@@ -1,5 +1,3 @@
->>>>>>> 2290abb (Developing Bookings Endpoint)
->>>>>>> 2290abb (Developing Bookings Endpoint)
 import "dotenv/config";
 import express from "express";
 
@@ -7,6 +5,7 @@ import authRoutes from "./routes/auth.routes.js";
 import skillsRoutes from "./routes/skills.routes.js";
 import courseRoutes from "./routes/courec.routes.js";
 import jobsRoutes from "./routes/jobs.routes.js";
+import jobsModuleRoutes from "./modules/jobs/routes.js";
 
 // optional module-style routes
 import housingsModuleRoutes from "./modules/housing/routes.js";
@@ -24,6 +23,7 @@ app.use("/api/jobs", jobsRoutes);
 // Mount module-based routes (if present)
 app.use("/api/housings", housingsModuleRoutes);
 app.use("/api/bookings", bookingModuleRoutes);
+app.use("/api/modules/jobs", jobsModuleRoutes);
 
 app.get("/", (_req, res) => {
   res.json({ message: "UniStay+ API is running" });
