@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import { configDotenv } from "dotenv";
 import type { NextFunction, Request, Response } from "express";
-
 export interface AuthRequest extends Request {
   userId: string;
   role: string;
@@ -24,12 +23,12 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
+      id: string;
       role: string;
     };
-    authReq.userId = decoded.userId;
+    authReq.userId = decoded.id;
     authReq.role = decoded.role;
-    authReq.user = { id: decoded.userId, role: decoded.role };
+    authReq.user = { id: decoded.id, role: decoded.role };
     next();
   } catch (error) {
     return res.status(403).json({ error: "Invalid token" });

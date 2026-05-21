@@ -65,32 +65,28 @@ enum AssignmentStatus {
 //////////////////////////////////////////////////////
 
 model User {
-  id        String   @id @default(uuid())
-  fullName  String
-  email     String   @unique
-  phone     String?
-  password  String
-  role      Role     @default(STUDENT)
-  location  String?
+  id               String    @id @default(uuid())
+  fullName         String
+  email            String    @unique
+  phone            String?
+  password         String
+  role             Role      @default(STUDENT)
+  location         String?
+  profilePicture   String?
+  isActive         Boolean   @default(true)
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Housing
-  housings  Housing[]
-  bookings  Booking[]
-
-  // Jobs
-  jobs          Job[]
-  applications  Application[]
-
-  // Skills
-  userSkills    UserSkill[]
-
-  // Learning
-  enrollments        Enrollment[]
-  certificates       Certificate[]
-  assignmentResults  AssignmentResult[]
+  housings          Housing[]
+  bookings          Booking[]
+  jobs              Job[]
+  applications      Application[]
+  userSkills        UserSkill[]
+  enrollments       Enrollment[]
+  certificates      Certificate[]
+  assignmentResults AssignmentResult[]
 }
 
 //////////////////////////////////////////////////////
@@ -104,32 +100,26 @@ model Housing {
   price              Float
   availability       Boolean            @default(true)
   verificationStatus VerificationStatus @default(PENDING)
-
   hostId             String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  host               User @relation(fields: [hostId], references: [id])
-
-  bookings           Booking[]
+  host     User      @relation(fields: [hostId], references: [id])
+  bookings Booking[]
 }
 
 model Booking {
-  id          String        @id @default(uuid())
-  userId      String
-  housingId   String
+  id        String        @id @default(uuid())
+  userId    String
+  housingId String
+  status    BookingStatus @default(PENDING)
+  checkIn   DateTime
+  checkOut  DateTime
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  status      BookingStatus @default(PENDING)
-
-  checkIn     DateTime
-  checkOut    DateTime
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user        User    @relation(fields: [userId], references: [id])
-  housing     Housing @relation(fields: [housingId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  housing Housing @relation(fields: [housingId], references: [id])
 }
 
 //////////////////////////////////////////////////////
@@ -137,34 +127,29 @@ model Booking {
 //////////////////////////////////////////////////////
 
 model Job {
-  id            String       @id @default(uuid())
-  title         String
-  location      String
-  salary        Float
-  scheduleType  ScheduleType
+  id           String       @id @default(uuid())
+  title        String
+  location     String
+  salary       Float
+  scheduleType ScheduleType
+  employerId   String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  employerId    String
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  employer       User @relation(fields: [employerId], references: [id])
-
-  applications   Application[]
-  jobSkills      JobSkill[]
+  employer     User          @relation(fields: [employerId], references: [id])
+  applications Application[]
+  jobSkills    JobSkill[]
 }
 
 model Application {
-  id          String            @id @default(uuid())
-  userId      String
-  jobId       String
+  id        String            @id @default(uuid())
+  userId    String
+  jobId     String
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
 
-  status      ApplicationStatus @default(PENDING)
-
-  createdAt   DateTime @default(now())
-
-  user        User @relation(fields: [userId], references: [id])
-  job         Job  @relation(fields: [jobId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  job  Job  @relation(fields: [jobId], references: [id])
 }
 
 //////////////////////////////////////////////////////
@@ -172,10 +157,10 @@ model Application {
 //////////////////////////////////////////////////////
 
 model Skill {
-  id          String     @id @default(uuid())
-  name        String
-  category    String
-  level       SkillLevel
+  id       String     @id @default(uuid())
+  name     String
+  category String
+  level    SkillLevel
 
   userSkills  UserSkill[]
   jobSkills   JobSkill[]
@@ -187,24 +172,22 @@ model UserSkill {
   id               String   @id @default(uuid())
   userId           String
   skillId          String
-
   completionStatus Boolean  @default(false)
-
   createdAt        DateTime @default(now())
 
-  user             User  @relation(fields: [userId], references: [id])
-  skill            Skill @relation(fields: [skillId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  skill Skill @relation(fields: [skillId], references: [id])
 
   @@unique([userId, skillId])
 }
 
 model JobSkill {
-  id        String @id @default(uuid())
-  jobId     String
-  skillId   String
+  id      String @id @default(uuid())
+  jobId   String
+  skillId String
 
-  job       Job   @relation(fields: [jobId], references: [id])
-  skill     Skill @relation(fields: [skillId], references: [id])
+  job   Job   @relation(fields: [jobId], references: [id])
+  skill Skill @relation(fields: [skillId], references: [id])
 
   @@unique([jobId, skillId])
 }
@@ -214,38 +197,31 @@ model JobSkill {
 //////////////////////////////////////////////////////
 
 model Course {
-  id            String   @id @default(uuid())
-  title         String
-  description   String?
-  thumbnail     String?
-  category      String?
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  thumbnail   String?
+  category    String?
+  uploadedBy  String
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  uploadedBy    String
-
-  isPublished   Boolean @default(false)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  materials     Material[]
-  enrollments   Enrollment[]
-  certificates  Certificate[]
+  materials    Material[]
+  enrollments  Enrollment[]
+  certificates Certificate[]
 }
 
 model Enrollment {
-  id                  String   @id @default(uuid())
+  id                 String   @id @default(uuid())
+  userId             String
+  courseId           String
+  progress           Float    @default(0)
+  completedMaterials Int      @default(0)
+  enrolledAt         DateTime @default(now())
 
-  userId              String
-  courseId            String
-
-  progress            Float    @default(0)
-
-  completedMaterials  Int      @default(0)
-
-  enrolledAt          DateTime @default(now())
-
-  user                User   @relation(fields: [userId], references: [id])
-  course              Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
 
   @@unique([userId, courseId])
 }
@@ -258,102 +234,71 @@ model Material {
   id          String       @id @default(uuid())
   title       String
   description String?
-
   type        MaterialType
-
   url         String
-
-  uploadedBy  String // admin id
-
+  uploadedBy  String
   courseId    String?
+  duration    Int?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  duration    Int? // minutes
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  course      Course? @relation(fields: [courseId], references: [id])
-
+  course      Course?         @relation(fields: [courseId], references: [id])
   skills      MaterialSkill[]
   assignments Assignment[]
 }
 
-// Many-to-many: which skills a material covers
 model MaterialSkill {
-  id          String @id @default(uuid())
+  id         String @id @default(uuid())
+  materialId String
+  skillId    String
 
-  materialId  String
-  skillId     String
-
-  material    Material @relation(fields: [materialId], references: [id])
-  skill       Skill    @relation(fields: [skillId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+  skill    Skill    @relation(fields: [skillId], references: [id])
 
   @@unique([materialId, skillId])
 }
 
 //////////////////////////////////////////////////////
-// ASSIGNMENTS / EXAMS
+// ASSIGNMENTS
 //////////////////////////////////////////////////////
 
 model Assignment {
   id            String   @id @default(uuid())
-
   title         String
-
   materialId    String
-
   skillId       String
-
   isStandalone  Boolean  @default(false)
-
-  timeLimit     Int? // minutes
-
+  timeLimit     Int?
   questionCount Int
-
   passingScore  Int      @default(70)
-
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  material      Material @relation(fields: [materialId], references: [id])
-
-  skill         Skill    @relation(fields: [skillId], references: [id])
-
-  questions     Question[]
-
-  results       AssignmentResult[]
+  material  Material           @relation(fields: [materialId], references: [id])
+  skill     Skill              @relation(fields: [skillId], references: [id])
+  questions Question[]
+  results   AssignmentResult[]
 }
 
-// A single question in the question pool for an assignment
 model Question {
-  id            String   @id @default(uuid())
+  id           String   @id @default(uuid())
+  assignmentId String
+  text         String
+  createdAt    DateTime @default(now())
 
-  assignmentId  String
-
-  text          String
-
-  createdAt     DateTime @default(now())
-
-  assignment    Assignment @relation(fields: [assignmentId], references: [id])
-
-  options       Option[]
-
-  answers       StudentAnswer[]
+  assignment Assignment      @relation(fields: [assignmentId], references: [id])
+  options    Option[]
+  answers    StudentAnswer[]
 }
 
-// One answer choice for a question
 model Option {
-  id              String  @id @default(uuid())
+  id         String  @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
 
-  questionId      String
-
-  text            String
-
-  isCorrect       Boolean @default(false)
-
-  question        Question @relation(fields: [questionId], references: [id])
-
-  studentAnswers  StudentAnswer[]
+  question       Question        @relation(fields: [questionId], references: [id])
+  studentAnswers StudentAnswer[]
 }
 
 //////////////////////////////////////////////////////
@@ -361,41 +306,28 @@ model Option {
 //////////////////////////////////////////////////////
 
 model AssignmentResult {
-  id             String           @id @default(uuid())
+  id           String           @id @default(uuid())
+  userId       String
+  assignmentId String
+  score        Int
+  status       AssignmentStatus @default(NOT_STARTED)
+  startedAt    DateTime         @default(now())
+  completedAt  DateTime?
 
-  userId         String
-  assignmentId   String
-
-  score          Int
-
-  status         AssignmentStatus @default(NOT_STARTED)
-
-  startedAt      DateTime @default(now())
-
-  completedAt    DateTime?
-
-  user           User       @relation(fields: [userId], references: [id])
-
-  assignment     Assignment @relation(fields: [assignmentId], references: [id])
-
-  answers        StudentAnswer[]
+  user       User            @relation(fields: [userId], references: [id])
+  assignment Assignment      @relation(fields: [assignmentId], references: [id])
+  answers    StudentAnswer[]
 }
 
-// Records the selected answer by the student
 model StudentAnswer {
-  id                   String @id @default(uuid())
+  id                 String @id @default(uuid())
+  assignmentResultId String
+  questionId         String
+  selectedOptionId   String
 
-  assignmentResultId   String
-
-  questionId           String
-
-  selectedOptionId     String
-
-  assignmentResult     AssignmentResult @relation(fields: [assignmentResultId], references: [id])
-
-  question             Question @relation(fields: [questionId], references: [id])
-
-  selectedOption       Option @relation(fields: [selectedOptionId], references: [id])
+  assignmentResult AssignmentResult @relation(fields: [assignmentResultId], references: [id])
+  question         Question         @relation(fields: [questionId], references: [id])
+  selectedOption   Option           @relation(fields: [selectedOptionId], references: [id])
 }
 
 //////////////////////////////////////////////////////
@@ -403,19 +335,14 @@ model StudentAnswer {
 //////////////////////////////////////////////////////
 
 model Certificate {
-  id              String   @id @default(uuid())
+  id             String   @id @default(uuid())
+  userId         String
+  courseId       String
+  certificateUrl String?
+  issuedAt       DateTime @default(now())
 
-  userId          String
-
-  courseId        String
-
-  certificateUrl  String?
-
-  issuedAt        DateTime @default(now())
-
-  user            User   @relation(fields: [userId], references: [id])
-
-  course          Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
 
   @@unique([userId, courseId])
 }
