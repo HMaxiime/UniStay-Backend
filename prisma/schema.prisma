@@ -73,6 +73,7 @@ model User {
   role             Role      @default(STUDENT)
   location         String?
   profilePicture   String?
+  isActive         Boolean   @default(true)
   resetToken       String?
   resetTokenExpiry DateTime?
   createdAt        DateTime  @default(now())

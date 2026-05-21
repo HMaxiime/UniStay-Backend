@@ -17,9 +17,9 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-    req.userId = decoded.userId;
-    req.role = decoded.role;
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+req.userId = decoded.id;
+req.role = decoded.role;
     next();
   } catch (error) {
     return res.status(403).json({ error: "Invalid token" });
