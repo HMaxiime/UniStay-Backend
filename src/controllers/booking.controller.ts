@@ -1,12 +1,14 @@
 import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
-import type { AuthRequest } from "../middleware/auth.js";
+import type { AuthRequest } from "../middleware/auth.middleware.js";
 
 // ─── GET ALL BOOKINGS (Admin) ─────────────────────────────────────────────────
 export const getAllBookings = async (req: AuthRequest, res: Response) => {
   try {
     if (req.user?.role !== "ADMIN") {
-      return res.status(403).json({ success: false, message: "Admin access required" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Admin access required" });
     }
 
     const { status, page = "1", limit = "10" } = req.query;
@@ -45,7 +47,9 @@ export const getAllBookings = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("getAllBookings error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -56,7 +60,9 @@ export const getMyBookings = async (req: AuthRequest, res: Response) => {
     const { status } = req.query;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User session not found" });
     }
 
     const filters: any = { userId: userId };
@@ -85,7 +91,9 @@ export const getMyBookings = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, data: bookings });
   } catch (error) {
     console.error("getMyBookings error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -97,7 +105,9 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Booking ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking ID is required" });
     }
 
     const booking = await prisma.booking.findUnique({
@@ -117,7 +127,9 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
     });
 
     if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     }
 
     // Students can only view their own bookings; hosts can view bookings on their listings
@@ -132,7 +144,9 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, data: booking });
   } catch (error) {
     console.error("getBookingById error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -145,39 +159,62 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
     const targetHousingId = housingId || housing_id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User session not found" });
     }
 
     if (!targetHousingId) {
-      return res.status(400).json({ success: false, message: "housingId is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "housingId is required" });
     }
 
-    const listing = await prisma.housing.findUnique({ where: { id: String(targetHousingId) } });
+    const listing = await prisma.housing.findUnique({
+      where: { id: String(targetHousingId) },
+    });
 
     if (!listing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (listing.verificationStatus !== "VERIFIED") {
-      return res.status(400).json({ success: false, message: "Listing is not verified" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing is not verified" });
     }
 
     if (!listing.availability) {
-      return res.status(400).json({ success: false, message: "Listing is not available" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing is not available" });
     }
 
     // Prevent a host from booking their own listing
     if (listing.hostId === userId) {
-      return res.status(400).json({ success: false, message: "You cannot book your own listing" });
+      return res
+        .status(400)
+        .json({ success: false, message: "You cannot book your own listing" });
     }
 
     // Prevent duplicate active booking on the same listing
     const duplicate = await prisma.booking.findFirst({
-      where: { userId: userId, housingId: String(targetHousingId), status: "CONFIRMED" },
+      where: {
+        userId: userId,
+        housingId: String(targetHousingId),
+        status: "CONFIRMED",
+      },
     });
 
     if (duplicate) {
-      return res.status(409).json({ success: false, message: "You already have an active booking for this listing" });
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message: "You already have an active booking for this listing",
+        });
     }
 
     const booking = await prisma.booking.create({
@@ -202,7 +239,9 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("createBooking error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -214,13 +253,19 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Booking ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking ID is required" });
     }
 
-    const booking = await prisma.booking.findUnique({ where: { id: String(id) } });
+    const booking = await prisma.booking.findUnique({
+      where: { id: String(id) },
+    });
 
     if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     }
 
     const isOwner = booking.userId === userId;
@@ -231,7 +276,9 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
     }
 
     if (booking.status === "CANCELLED") {
-      return res.status(400).json({ success: false, message: "Booking is already cancelled" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is already cancelled" });
     }
 
     const updated = await prisma.booking.update({
@@ -246,7 +293,9 @@ export const cancelBooking = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("cancelBooking error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -258,7 +307,9 @@ export const completeBooking = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Booking ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking ID is required" });
     }
 
     const booking = await prisma.booking.findUnique({
@@ -267,14 +318,21 @@ export const completeBooking = async (req: AuthRequest, res: Response) => {
     });
 
     if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
     }
 
     const isHost = booking.housing.hostId === userId;
     const isAdmin = userRole === "ADMIN";
 
     if (!isHost && !isAdmin) {
-      return res.status(403).json({ success: false, message: "Only the host or admin can complete a booking" });
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Only the host or admin can complete a booking",
+        });
     }
 
     if (booking.status !== "PENDING") {
@@ -302,7 +360,9 @@ export const completeBooking = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("completeBooking error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -316,13 +376,19 @@ export const getBookingsByListing = async (req: AuthRequest, res: Response) => {
     const targetHousingId = housingId || housing_id;
 
     if (!targetHousingId) {
-      return res.status(400).json({ success: false, message: "housingId is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "housingId is required" });
     }
 
-    const listing = await prisma.housing.findUnique({ where: { id: String(targetHousingId) } });
+    const listing = await prisma.housing.findUnique({
+      where: { id: String(targetHousingId) },
+    });
 
     if (!listing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (userRole !== "ADMIN" && listing.hostId !== userId) {
@@ -342,6 +408,8 @@ export const getBookingsByListing = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, data: bookings });
   } catch (error) {
     console.error("getBookingsByListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };

@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import type { Prisma } from "@prisma/client";
 
 import type { Request, Response } from "express";
 import { createCourseSchema } from "../validators/course.validator.js";
@@ -30,7 +31,30 @@ export async function getCourseById(req: Request, res: Response) {
 export async function createCourse(req: Request, res: Response) {
   try {
     const parsed = createCourseSchema.parse(req.body);
-    const course = await prisma.course.create({ data: parsed });
+
+    const uploadedBy = req.body.uploadedBy as string | undefined;
+    if (!uploadedBy) {
+      return res.status(400).json({ error: "uploadedBy is required" });
+    }
+
+    const createData: Prisma.CourseCreateInput = {
+      title: parsed.title,
+      uploadedBy,
+    };
+
+    if (parsed.description !== undefined) {
+      createData.description = parsed.description;
+    }
+    if (parsed.thumbnail !== undefined) {
+      createData.thumbnail = parsed.thumbnail;
+    }
+    if (parsed.category !== undefined) {
+      createData.category = parsed.category;
+    }
+
+    const course = await prisma.course.create({
+      data: createData,
+    });
     res.status(201).json(course);
   } catch (error) {
     console.error("Error creating course:", error);
@@ -56,7 +80,7 @@ export async function updateCourse(req: Request, res: Response) {
 
     const course = await prisma.course.update({
       where: { id: courseId },
-      data: updateData
+      data: updateData,
     });
     res.json(course);
   } catch (error) {

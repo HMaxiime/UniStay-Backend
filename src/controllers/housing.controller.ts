@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
-import type { AuthRequest } from "../middleware/auth.js";
+import type { AuthRequest } from "../middleware/auth.middleware.js";
 
 // ─── GET ALL LISTINGS (with filters) ────────────────────────────────────────
 export const getListings = async (req: AuthRequest, res: Response) => {
@@ -70,7 +70,9 @@ export const getListings = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("getListings error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -80,7 +82,9 @@ export const getListingById = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     const listing = await prisma.housing.findUnique({
@@ -93,13 +97,17 @@ export const getListingById = async (req: AuthRequest, res: Response) => {
     });
 
     if (!listing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     return res.status(200).json({ success: true, data: listing });
   } catch (error) {
     console.error("getListingById error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -110,11 +118,15 @@ export const createListing = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
 
     if (userRole !== "HOST" && userRole !== "ADMIN") {
-      return res.status(403).json({ success: false, message: "Only hosts can create listings" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Only hosts can create listings" });
     }
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User session not found" });
     }
 
     const {
@@ -157,7 +169,9 @@ export const createListing = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("createListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -169,13 +183,19 @@ export const updateListing = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
-    const existing = await prisma.housing.findUnique({ where: { id: String(id) } });
+    const existing = await prisma.housing.findUnique({
+      where: { id: String(id) },
+    });
 
     if (!existing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     // Only the owner host or an admin can update
@@ -213,7 +233,9 @@ export const updateListing = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
     console.error("updateListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -225,13 +247,19 @@ export const deleteListing = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
-    const existing = await prisma.housing.findUnique({ where: { id: String(id) } });
+    const existing = await prisma.housing.findUnique({
+      where: { id: String(id) },
+    });
 
     if (!existing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (userRole !== "ADMIN" && existing.hostId !== userId) {
@@ -243,7 +271,9 @@ export const deleteListing = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, message: "Listing deleted" });
   } catch (error) {
     console.error("deleteListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -254,11 +284,15 @@ export const verifyListing = async (req: AuthRequest, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     if (userRole !== "ADMIN") {
-      return res.status(403).json({ success: false, message: "Admin access required" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Admin access required" });
     }
 
     const { status } = req.body; // "VERIFIED" | "REJECTED"
@@ -282,7 +316,9 @@ export const verifyListing = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("verifyListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -292,7 +328,9 @@ export const getMyListings = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User session not found" });
     }
 
     const listings = await prisma.housing.findMany({
@@ -303,7 +341,9 @@ export const getMyListings = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, data: listings });
   } catch (error) {
     console.error("getMyListings error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -313,7 +353,9 @@ export const getRoommateMatches = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User session not found" });
     }
 
     // Find listings the current user has booked/applied for
@@ -346,7 +388,9 @@ export const getRoommateMatches = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ success: true, data: matches });
   } catch (error) {
     console.error("getRoommateMatches error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -357,25 +401,37 @@ export const bookListing = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User session not found" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User session not found" });
     }
 
-    const listing = await prisma.housing.findUnique({ where: { id: String(id) } });
+    const listing = await prisma.housing.findUnique({
+      where: { id: String(id) },
+    });
 
     if (!listing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (listing.verificationStatus !== "VERIFIED") {
-      return res.status(400).json({ success: false, message: "Listing is not verified" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing is not verified" });
     }
 
     if (!listing.availability) {
-      return res.status(400).json({ success: false, message: "Listing is not available" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing is not available" });
     }
 
     // Prevent double booking
@@ -384,7 +440,9 @@ export const bookListing = async (req: AuthRequest, res: Response) => {
     });
 
     if (existing) {
-      return res.status(409).json({ success: false, message: "Already booked this listing" });
+      return res
+        .status(409)
+        .json({ success: false, message: "Already booked this listing" });
     }
 
     const booking = await prisma.booking.create({
@@ -400,6 +458,8 @@ export const bookListing = async (req: AuthRequest, res: Response) => {
     return res.status(201).json({ success: true, data: booking });
   } catch (error) {
     console.error("bookListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
