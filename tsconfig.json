@@ -9,12 +9,17 @@
     // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
     "target": "esnext",
-    "types": ["node"],
+    "types": [],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
     // and npm install -D @types/node
 
+    // "module": "ESNext",
+    // "moduleResolution": "bundler",
+    // "target": "ES2023",
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0",
     // Other Outputs
     "sourceMap": true,
     "declaration": true,
@@ -24,15 +29,6 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
     "strict": true,
     "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
@@ -41,5 +37,6 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "exclude": ["prisma.config.mts", "node_modules", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "prisma"]
 }
