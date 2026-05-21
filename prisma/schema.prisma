@@ -44,6 +44,14 @@ enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  REJECTED    
+  COMPLETED   
+}
+enum PaymentStatus {
+  UNPAID
+  PENDING_VERIFICATION  
+  PAID
+  REFUNDED
 }
 
 enum MaterialType {
@@ -112,6 +120,10 @@ model Booking {
   userId    String
   housingId String
   status    BookingStatus @default(PENDING)
+  paymentStatus  PaymentStatus @default(UNPAID)
+  paymentProof   String?     
+  paymentRef     String?     
+  totalAmount    Float? 
   checkIn   DateTime
   checkOut  DateTime
   createdAt DateTime      @default(now())
