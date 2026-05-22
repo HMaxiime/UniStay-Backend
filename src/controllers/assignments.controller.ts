@@ -28,8 +28,9 @@ export async function getAssignments(_req: Request, res: Response) {
 
 export async function getAssignmentById(req: Request, res: Response) {
   try {
+    const id = req.params.id as string;
     const assignment = await prisma.assignment.findUnique({
-      where: { id: req.params.id as string },
+      where: { id },
       include: { material: true, skill: true, questions: { include: { options: true } } },
     });
     if (!assignment) return res.status(404).json({ error: "Assignment not found" });
@@ -42,8 +43,9 @@ export async function getAssignmentById(req: Request, res: Response) {
 export async function updateAssignment(req: Request, res: Response) {
   try {
     const data = updateAssignmentSchema.parse(req.body);
+    const id = req.params.id as string;
     const assignment = await prisma.assignment.update({
-      where: { id: req.params.id as string },
+      where: { id },
       data: data as any,
     });
     res.json(assignment);
@@ -54,7 +56,8 @@ export async function updateAssignment(req: Request, res: Response) {
 
 export async function deleteAssignment(req: Request, res: Response) {
   try {
-    await prisma.assignment.delete({ where: { id: req.params.id as string } });
+    const id = req.params.id as string;
+    await prisma.assignment.delete({ where: { id } });
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: "Failed to delete assignment" });
