@@ -10,15 +10,20 @@ import { Role } from '@prisma/client'
 
 export const getAllUsersHandler = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
     const userId = req.user?.id
     if (!userId) return res.status(401).json({ message: 'Authentication required' })
     const users = await getAllUsers(userId)
+=======
+    const users = await getAllUsers(req.user!.id)
+>>>>>>> ea92ad7f096edf3e7380d35849079998b870611a
     return res.status(200).json({ users })
   } catch (error: any) {
     return res.status(500).json({ message: error.message })
   }
 }
 
+<<<<<<< HEAD
 export const toggleUserActiveHandler = async (req: Request, res: Response) => {
   try {
     const id = req.params['id'] as string
@@ -35,6 +40,8 @@ export const toggleUserActiveHandler = async (req: Request, res: Response) => {
   }
 }
 
+=======
+>>>>>>> ea92ad7f096edf3e7380d35849079998b870611a
 export const getUserByIdHandler = async (req: Request, res: Response) => {
   try {
     const id = req.params['id'] as string
@@ -49,16 +56,13 @@ export const updateUserRoleHandler = async (req: Request, res: Response) => {
   try {
     const id = req.params['id'] as string
     const { role } = req.body
-
     if (!role) {
       return res.status(400).json({ message: 'Role is required' })
     }
-
     const allowedRoles = ['STUDENT', 'HOST', 'EMPLOYER', 'ADMIN']
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' })
     }
-
     const user = await updateUserRole(id, role as Role)
     return res.status(200).json({ message: 'User role updated successfully', user })
   } catch (error: any) {
@@ -66,6 +70,22 @@ export const updateUserRoleHandler = async (req: Request, res: Response) => {
   }
 }
 
+<<<<<<< HEAD
+=======
+export const toggleUserActiveHandler = async (req: Request, res: Response) => {
+  try {
+    const id = req.params['id'] as string
+    if (id === req.user!.id) {
+      return res.status(400).json({ message: 'You cannot deactivate your own account' })
+    }
+    const result = await toggleUserActive(id)
+    return res.status(200).json(result)
+  } catch (error: any) {
+    return res.status(404).json({ message: error.message })
+  }
+}
+
+>>>>>>> ea92ad7f096edf3e7380d35849079998b870611a
 export const deleteUserHandler = async (req: Request, res: Response) => {
   try {
     const id = req.params['id'] as string
