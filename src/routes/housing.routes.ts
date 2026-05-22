@@ -29,6 +29,7 @@ const upload = multer({
 });
 
 // ─── PUBLIC ROUTES ────────────────────────────────────────────────────────────
+ 
 router.get("/", getListings);
 router.get("/:id", getListingById);
 
