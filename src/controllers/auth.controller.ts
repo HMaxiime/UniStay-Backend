@@ -1,4 +1,4 @@
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 import {
   registerUser,
   loginUser,
@@ -8,11 +8,10 @@ import {
   resetPassword,
   getUserById,
 } from '../utils/auth.service.js'
-import type { AuthRequest } from '../middleware/auth.middleware.js'
 
 const ALLOWED_ROLES = ['STUDENT', 'HOST', 'EMPLOYER']
 
-export const register = async (req: AuthRequest, res: Response) => {
+export const register = async (req: Request, res: Response) => {
   try {
     const { fullName, email, password, phone, location, role } = req.body
     if (!fullName || !email || !password || !role) {
@@ -28,7 +27,7 @@ export const register = async (req: AuthRequest, res: Response) => {
   }
 }
 
-export const login = async (req: AuthRequest, res: Response) => {
+export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body
     if (!email || !password) {
@@ -41,27 +40,26 @@ export const login = async (req: AuthRequest, res: Response) => {
   }
 }
 
-export const getMe = async (req: AuthRequest, res: Response) => {
+export const getMe = async (req: Request, res: Response) => {
   try {
-   const user = await getUserById(req.userId)
+    const user = await getUserById(req.user!.id)
     return res.status(200).json({ user })
   } catch (error: any) {
     return res.status(404).json({ message: error.message })
   }
 }
 
-export const updateProfileHandler = async (req: AuthRequest, res: Response) => {
-
+export const updateProfileHandler = async (req: Request, res: Response) => {
   try {
     const { fullName, phone, location } = req.body
-    const user = await updateProfile(req.userId, { fullName, phone, location })
+    const user = await updateProfile(req.user!.id, { fullName, phone, location })
     return res.status(200).json({ message: 'Profile updated successfully', user })
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
   }
 }
 
-export const changePasswordHandler = async (req: AuthRequest, res: Response) => {
+export const changePasswordHandler = async (req: Request, res: Response) => {
   try {
     const { oldPassword, newPassword } = req.body
     if (!oldPassword || !newPassword) {
@@ -70,14 +68,14 @@ export const changePasswordHandler = async (req: AuthRequest, res: Response) => 
     if (newPassword.length < 6) {
       return res.status(400).json({ message: 'New password must be at least 6 characters' })
     }
-   const result = await changePassword(req.userId, { oldPassword, newPassword })
+    const result = await changePassword(req.user!.id, { oldPassword, newPassword })
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
   }
 }
 
-export const forgotPasswordHandler = async (req: AuthRequest, res: Response) => {
+export const forgotPasswordHandler = async (req: Request, res: Response) => {
   try {
     const { email } = req.body
     if (!email) {
@@ -90,7 +88,7 @@ export const forgotPasswordHandler = async (req: AuthRequest, res: Response) => 
   }
 }
 
-export const resetPasswordHandler = async (req: AuthRequest, res: Response) => {
+export const resetPasswordHandler = async (req: Request, res: Response) => {
   try {
     const { token, newPassword } = req.body
     if (!token || !newPassword) {
@@ -106,7 +104,7 @@ export const resetPasswordHandler = async (req: AuthRequest, res: Response) => {
   }
 }
 
-export const getUserByIdHandler = async (req: AuthRequest, res: Response) => {
+export const getUserByIdHandler = async (req: Request, res: Response) => {
   try {
     const id = req.params['id'] as string
     const user = await getUserById(id)
