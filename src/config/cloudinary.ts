@@ -93,4 +93,13 @@ export async function deleteFromCloudinary(
   await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 }
 
+ export function extractCloudinaryPublicId(url: string): string | null {
+  try {
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/i);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+ 
 export default cloudinary;
