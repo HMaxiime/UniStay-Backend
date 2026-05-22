@@ -21,9 +21,9 @@ function withVideoFiles<T extends { files: Array<{ resourceType: string; mimeTyp
 export async function getMaterials(req: Request, res: Response) {
     try {
         const materials = await prisma.material.findMany({
-            include: materialInclude,
+            include: { course: true, files: true, skills: { include: { skill: true } }, assignments: true },
         });
-        res.json(materials.map(withVideoFiles));
+        res.json(materials);
     } catch (error) {
         console.error("Error fetching materials:", error);
         res.status(500).json({ error: "Failed to fetch materials" });
@@ -35,7 +35,7 @@ export async function getMaterialById(req: Request, res: Response) {
         const materialId = req.params.id as string;
         const material = await prisma.material.findUnique({
             where: { id: materialId },
-            include: materialInclude,
+            include: { course: true, files: true, skills: { include: { skill: true } }, assignments: true },
         });
         if (!material) {
             return res.status(404).json({ error: "Material not found" });

@@ -49,16 +49,13 @@ export const updateUserRoleHandler = async (req: Request, res: Response) => {
   try {
     const id = req.params['id'] as string
     const { role } = req.body
-
     if (!role) {
       return res.status(400).json({ message: 'Role is required' })
     }
-
     const allowedRoles = ['STUDENT', 'HOST', 'EMPLOYER', 'ADMIN']
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' })
     }
-
     const user = await updateUserRole(id, role as Role)
     return res.status(200).json({ message: 'User role updated successfully', user })
   } catch (error: any) {

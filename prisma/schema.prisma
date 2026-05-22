@@ -104,6 +104,10 @@ model Housing {
   id                 String             @id @default(uuid())
   title              String
   location           String
+  description  String?
+  bedrooms     Int?
+  amenities    String[]  @default([])
+  images       String[]  @default([])
   price              Float
   availability       Boolean            @default(true)
   verificationStatus VerificationStatus @default(PENDING)
