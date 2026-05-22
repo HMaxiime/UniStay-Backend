@@ -13,7 +13,6 @@ import { authenticate } from "../middleware/auth.middleware.js";
  
 const router = Router();
  
-// Public routes
 router.get("/", getListings);
 router.get("/:id", getListingById);
  
