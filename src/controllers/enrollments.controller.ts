@@ -1,12 +1,13 @@
-import type { Response , Request } from "express";
+import type { Response } from "express";
 import prisma from "../config/prisma.js";
+import type { AuthRequest } from "../middleware/auth.middleware.js";
 import { createEnrollmentSchema } from "../validators/learning.validator.js";
 
-export async function createEnrollment(req: Request, res: Response) {
+export async function createEnrollment(req: AuthRequest, res: Response) {
   try {
-    const userId = req.user?.id;
     const data = createEnrollmentSchema.parse(req.body);
-    if (!userId) return res.status(401).json({ error: "Authentication required" });
+    const userId = req.userId ?? data.userId;
+    if (!userId) return res.status(400).json({ error: "userId is required" });
 
     const enrollment = await prisma.enrollment.create({
       data: { userId, courseId: data.courseId },
