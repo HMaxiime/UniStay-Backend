@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 
 import prisma from "../config/prisma.js";
-import type { AuthRequest } from "../middleware/auth.middleware.js";
 import { createJobSchema } from "../validators/jobs.validator.js";
 
 export async function getJobs(req: Request, res: Response): Promise<void> {
@@ -72,10 +71,13 @@ export async function getJobById(req: Request, res: Response): Promise<void> {
 
 export async function createJob(req: Request, res: Response): Promise<void> {
   try {
-    const authReq = req as AuthRequest;
-    const userId = authReq.userId;
-    const userRole = authReq.role;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
 
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
     if (userRole !== "EMPLOYER" && userRole !== "ADMIN") {
       res
         .status(403)
@@ -105,9 +107,8 @@ export async function createJob(req: Request, res: Response): Promise<void> {
 export async function updateJob(req: Request, res: Response): Promise<void> {
   try {
     const jobId = req.params.id as string;
-    const authReq = req as AuthRequest;
-    const userId = authReq.userId;
-    const userRole = authReq.role;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
 
     const existing = await prisma.job.findUnique({ where: { id: jobId } });
     if (!existing) {
@@ -142,9 +143,8 @@ export async function updateJob(req: Request, res: Response): Promise<void> {
 export async function deleteJob(req: Request, res: Response): Promise<void> {
   try {
     const jobId = req.params.id as string;
-    const authReq = req as AuthRequest;
-    const userId = authReq.userId;
-    const userRole = authReq.role;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
 
     const existing = await prisma.job.findUnique({ where: { id: jobId } });
     if (!existing) {
