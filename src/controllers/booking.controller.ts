@@ -468,15 +468,14 @@ export const completeBooking = async (req: Request, res: Response) => {
 // ─── GET BOOKINGS FOR A LISTING (Host / Admin) ───────────────────────────────
 export const getBookingsByListing = async (req: Request, res: Response) => {
   try {
-    const { housingId, housing_id } = req.params;
     const userId  = req.user?.id;
     const userRole = req.user?.role;
-    const targetHousingId = housingId ?? housing_id;
+    const targetHousingId = req.params["housingId"] ?? req.params["housing_id"];
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
-    if (!targetHousingId) {
+    if (typeof targetHousingId !== "string" || !targetHousingId) {
       return res.status(400).json({ success: false, message: "housingId is required" });
     }
 

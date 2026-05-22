@@ -2,11 +2,6 @@ import prisma from "../config/prisma.js";
 import type { Request, Response } from "express";
 import { createJobSchema } from "../validators/jobs.validator.js";
 
-interface AuthRequest extends Request {
-  userId?: string;
-  role?: string;
-}
-
 export async function getJobs(_req: Request, res: Response) {
   try {
     const jobs = await prisma.job.findMany({
@@ -40,12 +35,15 @@ export async function getJobById(req: Request, res: Response) {
   }
 }
 
-export async function createJob(req: AuthRequest, res: Response) {
+export async function createJob(req: Request, res: Response) {
   try {
     const parsed = createJobSchema.parse(req.body);
-    const employerId = req.userId ?? (req.body.employerId as string);
+    const employerId = req.user?.id;
     if (!employerId) {
-      return res.status(400).json({ error: "employerId is required" });
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    if (req.user?.role !== "EMPLOYER" && req.user?.role !== "ADMIN") {
+      return res.status(403).json({ error: "Only employers can create jobs" });
     }
 
     const job = await prisma.job.create({
@@ -64,17 +62,22 @@ export async function createJob(req: AuthRequest, res: Response) {
   }
 }
 
-export async function updateJob(req: AuthRequest, res: Response) {
+export async function updateJob(req: Request, res: Response) {
   try {
     const jobId = req.params.id as string;
     const parsed = createJobSchema.parse(req.body);
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
 
     // Ensure job exists
     const existing = await prisma.job.findUnique({ where: { id: jobId } });
     if (!existing) return res.status(404).json({ error: "Job not found" });
 
-    // If userId present, enforce ownership
-    if (req.userId && existing.employerId !== req.userId) {
+    if (userRole !== "ADMIN" && existing.employerId !== userId) {
       return res
         .status(403)
         .json({ error: "Not authorized to update this job" });
@@ -96,13 +99,20 @@ export async function updateJob(req: AuthRequest, res: Response) {
   }
 }
 
-export async function deleteJob(req: AuthRequest, res: Response) {
+export async function deleteJob(req: Request, res: Response) {
   try {
     const jobId = req.params.id as string;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
     const existing = await prisma.job.findUnique({ where: { id: jobId } });
     if (!existing) return res.status(404).json({ error: "Job not found" });
 
-    if (req.userId && existing.employerId !== req.userId) {
+    if (userRole !== "ADMIN" && existing.employerId !== userId) {
       return res
         .status(403)
         .json({ error: "Not authorized to delete this job" });

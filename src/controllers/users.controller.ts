@@ -10,10 +10,28 @@ import { Role } from '@prisma/client'
 
 export const getAllUsersHandler = async (req: Request, res: Response) => {
   try {
-    const users = await getAllUsers(req.user!.id)
+    const userId = req.user?.id
+    if (!userId) return res.status(401).json({ message: 'Authentication required' })
+    const users = await getAllUsers(userId)
     return res.status(200).json({ users })
   } catch (error: any) {
     return res.status(500).json({ message: error.message })
+  }
+}
+
+export const toggleUserActiveHandler = async (req: Request, res: Response) => {
+  try {
+    const id = req.params['id'] as string
+    const userId = req.user?.id
+    if (!userId) return res.status(401).json({ message: 'Authentication required' })
+    if (id === userId) {
+      return res.status(400).json({ message: 'You cannot deactivate your own account' })
+    }
+
+    const result = await toggleUserActive(id)
+    return res.status(200).json(result)
+  } catch (error: any) {
+    return res.status(404).json({ message: error.message })
   }
 }
 
@@ -42,19 +60,6 @@ export const updateUserRoleHandler = async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'User role updated successfully', user })
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
-  }
-}
-
-export const toggleUserActiveHandler = async (req: Request, res: Response) => {
-  try {
-    const id = req.params['id'] as string
-    if (id === req.user!.id) {
-      return res.status(400).json({ message: 'You cannot deactivate your own account' })
-    }
-    const result = await toggleUserActive(id)
-    return res.status(200).json(result)
-  } catch (error: any) {
-    return res.status(404).json({ message: error.message })
   }
 }
 
