@@ -7,6 +7,7 @@ import materialsRoute from "./routes/materials.routes.js";
 import usersRoutes from "./routes/users.routes.js";
 import jobsRoutes from "./routes/jobs.routes.js";
 import housingRoutes from "./routes/housing.routes.js";
+import bookingRoutes from "./routes/booking.routes.js";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/api/materials", materialsRoute);
 app.use("/api/users", usersRoutes);
 app.use("/api/jobs", jobsRoutes);
 app.use("/api/listings", housingRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 app.get("/", (_req, res) => {
   res.json({ message: "UniStay+ API is running" });
