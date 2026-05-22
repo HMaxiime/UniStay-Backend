@@ -42,7 +42,9 @@ export const login = async (req: Request, res: Response) => {
 
 export const getMe = async (req: Request, res: Response) => {
   try {
-    const user = await getUserById(req.user!.id)
+    const userId = req.user?.id
+    if (!userId) return res.status(401).json({ message: 'Authentication required' })
+    const user = await getUserById(userId)
     return res.status(200).json({ user })
   } catch (error: any) {
     return res.status(404).json({ message: error.message })
@@ -50,9 +52,12 @@ export const getMe = async (req: Request, res: Response) => {
 }
 
 export const updateProfileHandler = async (req: Request, res: Response) => {
+
   try {
     const { fullName, phone, location } = req.body
-    const user = await updateProfile(req.user!.id, { fullName, phone, location })
+    const userId = req.user?.id
+    if (!userId) return res.status(401).json({ message: 'Authentication required' })
+    const user = await updateProfile(userId, { fullName, phone, location })
     return res.status(200).json({ message: 'Profile updated successfully', user })
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
@@ -68,7 +73,9 @@ export const changePasswordHandler = async (req: Request, res: Response) => {
     if (newPassword.length < 6) {
       return res.status(400).json({ message: 'New password must be at least 6 characters' })
     }
-    const result = await changePassword(req.user!.id, { oldPassword, newPassword })
+    const userId = req.user?.id
+    if (!userId) return res.status(401).json({ message: 'Authentication required' })
+    const result = await changePassword(userId, { oldPassword, newPassword })
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
