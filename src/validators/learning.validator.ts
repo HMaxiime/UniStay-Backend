@@ -33,14 +33,17 @@ export const createOptionSchema = z.object({
 export const updateOptionSchema = createOptionSchema.pick({ text: true, isCorrect: true }).partial();
 
 export const createEnrollmentSchema = z.object({
+  userId: z.string().uuid("userId must be valid").optional(),
   courseId: z.string().uuid("courseId must be valid"),
 });
 
 export const startAssignmentSchema = z.object({
+  userId: z.string().uuid("userId must be valid").optional(),
   assignmentId: z.string().uuid("assignmentId must be valid"),
 });
 
 export const submitAssignmentSchema = z.object({
+  userId: z.string().uuid("userId must be valid").optional(),
   assignmentResultId: z.string().uuid("assignmentResultId must be valid"),
   answers: z.array(
     z.object({
