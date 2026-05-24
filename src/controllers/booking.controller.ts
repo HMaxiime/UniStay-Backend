@@ -1,6 +1,19 @@
 import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
 
+const activeBookingStatuses = ["PENDING", "CONFIRMED"] as const;
+
+function parseBookingDate(value: unknown) {
+  if (typeof value !== "string" && !(value instanceof Date)) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getNightCount(checkIn: Date, checkOut: Date) {
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return Math.ceil((checkOut.getTime() - checkIn.getTime()) / millisecondsPerDay);
+}
+
 // ─── GET ALL BOOKINGS (Admin only) ────────────────────────────────────────────
 export const getAllBookings = async (req: Request, res: Response) => {
   try {
@@ -128,8 +141,10 @@ export const getBookingById = async (req: Request, res: Response) => {
 export const createBooking = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { housingId, housing_id } = req.body;
+    const { housingId, housing_id, checkIn: rawCheckIn, checkOut: rawCheckOut } = req.body;
     const targetHousingId: string | undefined = housingId ?? housing_id;
+    const checkIn = parseBookingDate(rawCheckIn);
+    const checkOut = parseBookingDate(rawCheckOut);
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -137,6 +152,12 @@ export const createBooking = async (req: Request, res: Response) => {
 
     if (!targetHousingId) {
       return res.status(400).json({ success: false, message: "housingId is required" });
+    }
+    if (!checkIn || !checkOut) {
+      return res.status(400).json({ success: false, message: "checkIn and checkOut must be valid dates" });
+    }
+    if (checkOut <= checkIn) {
+      return res.status(400).json({ success: false, message: "checkOut must be after checkIn" });
     }
 
     const listing = await prisma.housing.findUnique({ where: { id: targetHousingId } });
@@ -158,7 +179,7 @@ export const createBooking = async (req: Request, res: Response) => {
       where: {
         userId,
         housingId: targetHousingId,
-        status: { in: ["PENDING", "CONFIRMED"] },
+        status: { in: [...activeBookingStatuses] },
       },
     });
 
@@ -169,15 +190,33 @@ export const createBooking = async (req: Request, res: Response) => {
       });
     }
 
+    const overlappingBooking = await prisma.booking.findFirst({
+      where: {
+        housingId: targetHousingId,
+        status: { in: [...activeBookingStatuses] },
+        checkIn: { lt: checkOut },
+        checkOut: { gt: checkIn },
+      },
+    });
+
+    if (overlappingBooking) {
+      return res.status(409).json({
+        success: false,
+        message: "This listing already has a pending or confirmed booking for those dates",
+      });
+    }
+
+    const nightCount = getNightCount(checkIn, checkOut);
+
     const booking = await prisma.booking.create({
       data: {
         userId,
         housingId: targetHousingId,
         status: "PENDING",
         paymentStatus: "UNPAID",
-        totalAmount: listing.price,             // snapshot price at booking time
-        checkIn: new Date(),
-        checkOut: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        totalAmount: listing.price * nightCount,
+        checkIn,
+        checkOut,
       },
       include: {
         housing: { select: { id: true, title: true, location: true, price: true } },
@@ -275,6 +314,12 @@ export const confirmBooking = async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: `Cannot confirm a booking with status: ${booking.status}`,
+      });
+    }
+    if (!booking.paymentProof || booking.paymentStatus !== "PENDING_VERIFICATION") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment proof must be submitted before confirming a booking",
       });
     }
 

@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express'
+import type { AuthRequest } from '../middleware/auth.middleware.js'
 import {
   registerUser,
   loginUser,
@@ -42,7 +43,8 @@ export const login = async (req: Request, res: Response) => {
 
 export const getMe = async (req: Request, res: Response) => {
   try {
-   const user = await getUserById(req.userId)
+    if (!req.userId) return res.status(401).json({ message: 'Authentication required' })
+    const user = await getUserById(req.userId)
     return res.status(200).json({ user })
   } catch (error: any) {
     return res.status(404).json({ message: error.message })
@@ -52,6 +54,7 @@ export const getMe = async (req: Request, res: Response) => {
 export const updateProfileHandler = async (req: AuthRequest, res: Response) => {
 
   try {
+    if (!req.userId) return res.status(401).json({ message: 'Authentication required' })
     const { fullName, phone, location } = req.body
     const user = await updateProfile(req.userId, { fullName, phone, location })
     return res.status(200).json({ message: 'Profile updated successfully', user })
@@ -62,6 +65,7 @@ export const updateProfileHandler = async (req: AuthRequest, res: Response) => {
 
 export const changePasswordHandler = async (req: Request, res: Response) => {
   try {
+    if (!req.userId) return res.status(401).json({ message: 'Authentication required' })
     const { oldPassword, newPassword } = req.body
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ message: 'oldPassword and newPassword are required' })
@@ -69,7 +73,7 @@ export const changePasswordHandler = async (req: Request, res: Response) => {
     if (newPassword.length < 6) {
       return res.status(400).json({ message: 'New password must be at least 6 characters' })
     }
-   const result = await changePassword(req.userId, { oldPassword, newPassword })
+    const result = await changePassword(req.userId, { oldPassword, newPassword })
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })

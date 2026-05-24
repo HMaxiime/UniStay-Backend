@@ -2,10 +2,13 @@ import "dotenv/config";
 import app from "./app.js";
 import { connectDB } from "./config/prisma.js";
 import { createServer } from "node:http";
+import { setupSwagger } from "./config/swagger.js";
 
 
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
+
+setupSwagger(app);
 
 async function startServer() {
   try {

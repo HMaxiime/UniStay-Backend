@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
+  extractCloudinaryPublicId,
 } from "../config/cloudinary.js";
 
 // ─── GET ALL LISTINGS (with filters) ────────────────────────────────────────
