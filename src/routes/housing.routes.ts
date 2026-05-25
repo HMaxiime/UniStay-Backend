@@ -15,8 +15,6 @@ import { authenticate } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-// Multer: store files in memory so we can pipe buffers straight to Cloudinary.
-// Limits: max 10 files, 5 MB each, images only.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 10 },
@@ -24,12 +22,11 @@ const upload = multer({
     if (!file.mimetype.startsWith("image/")) {
       return cb(new Error("Only image files are allowed"));
     }
+
     cb(null, true);
   },
 });
 
-// ─── PUBLIC ROUTES ────────────────────────────────────────────────────────────
- 
 /**
  * @swagger
  * /api/listings:
@@ -61,6 +58,7 @@ const upload = multer({
  *     responses:
  *       201:
  *         description: Listing created
+ *
  * /api/listings/me/listings:
  *   get:
  *     summary: Get authenticated host listings
@@ -70,6 +68,7 @@ const upload = multer({
  *     responses:
  *       200:
  *         description: My listings
+ *
  * /api/listings/{id}:
  *   get:
  *     summary: Get listing by ID
@@ -111,6 +110,7 @@ const upload = multer({
  *     responses:
  *       200:
  *         description: Listing deleted
+ *
  * /api/listings/{id}/verify:
  *   patch:
  *     summary: Verify or reject listing
@@ -126,6 +126,7 @@ const upload = multer({
  *     responses:
  *       200:
  *         description: Listing verification updated
+ *
  * /api/listings/{id}/images:
  *   post:
  *     summary: Upload listing images
@@ -174,24 +175,12 @@ const upload = multer({
  *         description: Image deleted
  */
 router.get("/", getListings);
-router.get("/:id", getListingById);
-
-// ─── PROTECTED ROUTES ────────────────────────────────────────────────────────
-// Host: view own listings
 router.get("/me/listings", authenticate, getMyListings);
-
-// Host / Admin: create listing (up to 10 images attached at creation time)
+router.get("/:id", getListingById);
 router.post("/", authenticate, upload.array("images", 10), createListing);
-
-// Host / Admin: update listing details + optionally add more images
 router.put("/:id", authenticate, upload.array("images", 10), updateListing);
-
-// Host / Admin: delete listing (also purges Cloudinary images)
 router.delete("/:id", authenticate, deleteListing);
-
-// Admin: verify or reject a listing
 router.patch("/:id/verify", authenticate, verifyListing);
-
 router.post("/:id/images", authenticate, upload.array("images", 10), uploadHousingImages);
 router.delete("/:id/images", authenticate, deleteHousingImage);
 
