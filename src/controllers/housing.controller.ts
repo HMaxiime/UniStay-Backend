@@ -170,7 +170,7 @@ export const createListing = async (req: Request, res: Response) => {
         bedrooms: bedrooms !== undefined ? Number(bedrooms) : null,
         amenities: parseAmenities(amenities),
         images: uploadedImages,
-        availability: availability ?? true,
+        availability: availability === undefined || availability === true || availability === "true",
         hostId: userId,
         verificationStatus: "PENDING",
       },
