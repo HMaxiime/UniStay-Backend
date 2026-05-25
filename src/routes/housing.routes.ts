@@ -11,12 +11,15 @@ import {
   uploadHousingImages,
   deleteHousingImage,
 } from "../controllers/housing.controller.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+import {
+  authenticate,
+  authorize,
+  requireAdmin,
+} from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-// Multer: store files in memory so we can pipe buffers straight to Cloudinary.
-// Limits: max 10 files, 5 MB each, images only.
+// ─── Multer: memory storage, images only, 5 MB per file, 10 files max ────────
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 10 },
@@ -28,27 +31,48 @@ const upload = multer({
   },
 });
 
-// ─── PUBLIC ROUTES ────────────────────────────────────────────────────────────
+// ─── PUBLIC ROUTES (no auth needed) ──────────────────────────────────────────
 router.get("/", getListings);
 router.get("/:id", getListingById);
 
-// ─── PROTECTED ROUTES ────────────────────────────────────────────────────────
-// Host: view own listings
-router.get("/me/listings", authenticate, getMyListings);
+// ─── ALL ROUTES BELOW REQUIRE AUTH ───────────────────────────────────────────
+router.use(authenticate);
 
-// Host / Admin: create listing (up to 10 images attached at creation time)
-router.post("/", authenticate, upload.array("images", 10), createListing);
+// IMPORTANT: /me must come before /:id or Express matches "me" as an id param
+router.get("/me/listings", authorize(["HOST", "ADMIN"]), getMyListings);
 
-// Host / Admin: update listing details + optionally add more images
-router.put("/:id", authenticate, upload.array("images", 10), updateListing);
+// Host / Admin: create listing (images optional via multipart/form-data)
+router.post(
+  "/",
+  authorize(["HOST", "ADMIN"]),
+  upload.array("images", 10),
+  createListing
+);
 
-// Host / Admin: delete listing (also purges Cloudinary images)
-router.delete("/:id", authenticate, deleteListing);
+// Host / Admin: update listing + optionally add more images
+router.put(
+  "/:id",
+  authorize(["HOST", "ADMIN"]),
+  upload.array("images", 10),
+  updateListing
+);
 
-// Admin: verify or reject a listing
-router.patch("/:id/verify", authenticate, verifyListing);
+// Host / Admin: delete listing 
+router.delete("/:id", authorize(["HOST", "ADMIN"]), deleteListing);
 
-router.post("/:id/images", authenticate, upload.array("images", 10), uploadHousingImages);
-router.delete("/:id/images", authenticate, deleteHousingImage);
+// Admin only: verify or reject a listing
+router.patch("/:id/verify", requireAdmin, verifyListing);
+
+router.post(
+  "/:id/images",
+  authorize(["HOST", "ADMIN"]),
+  upload.array("images", 10),
+  uploadHousingImages
+);
+router.delete(
+  "/:id/images",
+  authorize(["HOST", "ADMIN"]),
+  deleteHousingImage
+);
 
 export default router;

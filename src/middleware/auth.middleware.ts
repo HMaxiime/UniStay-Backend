@@ -4,7 +4,6 @@ import type { NextFunction, Request, Response } from "express";
 
 configDotenv();
 
-// ─── Extend Express Request to carry authenticated user ───────────────────────
 declare global {
   namespace Express {
     interface Request {
@@ -19,8 +18,7 @@ declare global {
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 // ─── authenticate ─────────────────────────────────────────────────────────────
-// Verifies the Bearer token and attaches { id, role } to req.user.
-// All downstream middleware and controllers read from req.user.
+
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];

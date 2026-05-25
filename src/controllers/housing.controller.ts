@@ -5,7 +5,26 @@ import {
   deleteFromCloudinary,
 } from "../config/cloudinary.js";
 
-// ─── GET ALL LISTINGS (with filters) ────────────────────────────────────────
+
+function parseAmenities(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed.map(String);
+      } catch {
+        // fall through to comma-split
+      }
+    }
+    return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+// ─── GET ALL LISTINGS (with filters) 
 export const getListings = async (req: Request, res: Response) => {
   try {
     const {
@@ -148,7 +167,7 @@ export const createListing = async (req: Request, res: Response) => {
         location,
         price: Number(price),
         bedrooms: bedrooms !== undefined ? Number(bedrooms) : null,
-        amenities: amenities ?? [],
+        amenities: parseAmenities(amenities),
         images: uploadedImages,
         availability: availability ?? true,
         hostId: userId,
@@ -214,7 +233,7 @@ export const updateListing = async (req: Request, res: Response) => {
         ...(location && { location }),
         ...(price !== undefined && { price: Number(price) }),
         ...(bedrooms !== undefined && { bedrooms: Number(bedrooms) }),
-        ...(amenities && { amenities }),
+        ...(amenities !== undefined && { amenities: parseAmenities(amenities) }),
         images: mergedImages,
         ...(availability !== undefined && { availability }),
         // Non-admin edits reset verification so admin must re-approve
