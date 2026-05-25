@@ -4,9 +4,18 @@ import type { NextFunction, Request, Response } from "express";
 
 configDotenv();
 
+export type AuthRequest = Request & {
+  userId?: string;
+  user?: {
+    id: string;
+    role: string;
+  };
+};
+
 declare global {
   namespace Express {
     interface Request {
+      userId?: string;
       user?: {
         id: string;
         role: string;
@@ -30,6 +39,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
     req.user = { id: decoded.id, role: decoded.role };
+    req.userId = decoded.id;
     next();
   } catch (error) {
     return res.status(403).json({ error: "Invalid token" });

@@ -31,14 +31,29 @@ const upload = multer({
   },
 });
 
-// ─── PUBLIC ROUTES (no auth needed) ──────────────────────────────────────────
+/**
+ * swagger
+ * /api/housings:
+ * get:
+ * summary: Get all housing listings
+ * tags: Housings
+ * responses:
+ * 200:
+ * description: List of hosuing listings retrieved successfully
+*/
 router.get("/", getListings);
+/**
+ * swagger
+ * /api/housings/{id}:
+ * get:
+ * summary: Get a housing listing by Id
+ * 201:
+ * description: Housing listing retrieved successfully
+*/
 router.get("/:id", getListingById);
 
-// ─── ALL ROUTES BELOW REQUIRE AUTH ───────────────────────────────────────────
 router.use(authenticate);
 
-// IMPORTANT: /me must come before /:id or Express matches "me" as an id param
 router.get("/me/listings", authorize(["HOST", "ADMIN"]), getMyListings);
 
 // Host / Admin: create listing (images optional via multipart/form-data)

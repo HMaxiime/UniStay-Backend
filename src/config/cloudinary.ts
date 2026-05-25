@@ -93,13 +93,22 @@ export async function deleteFromCloudinary(
   await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 }
 
- export function extractCloudinaryPublicId(url: string): string | null {
+export function extractCloudinaryPublicId(url: string): string | null {
   try {
-    const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/i);
-    return match ? match[1] : null;
+    const parsedUrl = new URL(url);
+    const pathParts = parsedUrl.pathname.split("/");
+    const uploadIndex = pathParts.indexOf("upload");
+
+    if (uploadIndex === -1) return null;
+
+    const publicIdParts = pathParts.slice(uploadIndex + 1);
+    if (publicIdParts[0]?.startsWith("v")) publicIdParts.shift();
+
+    const publicId = publicIdParts.join("/").replace(/\.[^/.]+$/, "");
+    return publicId || null;
   } catch {
     return null;
   }
 }
- 
+
 export default cloudinary;
