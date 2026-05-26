@@ -5,7 +5,7 @@ export const createCourseSchema = z.object({
   description: z.string().optional(),
   thumbnail: z.string().optional(),
   category: z.string().optional(),
-  uploadedBy: z.string().uuid('uploadedBy must be a valid user id'),
+  skillIds: z.array(z.string().uuid('skillId must be valid')).optional(),
 })
 
 export const updateCourseSchema = createCourseSchema.partial()

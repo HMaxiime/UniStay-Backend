@@ -5,9 +5,26 @@ type SubmittedAnswer = {
   selectedOptionId: string;
 };
 
+const EXAM_QUESTION_LIMIT = 10;
+
+function shuffle<T>(items: T[]) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
 export async function startAssignment(userId: string, assignmentId: string) {
-  const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      course: true,
+      questions: { include: { options: true } },
+    },
+  });
   if (!assignment) throw new Error("Assignment not found");
+  if (assignment.questions.length === 0) {
+    throw new Error("This assignment has no questions yet");
+  }
+
+  const selectedQuestions = shuffle(assignment.questions).slice(0, EXAM_QUESTION_LIMIT);
 
   return prisma.assignmentResult.create({
     data: {
@@ -15,8 +32,16 @@ export async function startAssignment(userId: string, assignmentId: string) {
       assignmentId,
       score: 0,
       status: "IN_PROGRESS",
+      questions: {
+        create: selectedQuestions.map((question) => ({
+          questionId: question.id,
+        })),
+      },
     },
-    include: { assignment: true },
+    include: {
+      assignment: { include: { course: true } },
+      questions: { include: { question: { include: { options: true } } } },
+    },
   });
 }
 
@@ -30,21 +55,26 @@ export async function submitAssignment(
     include: {
       assignment: {
         include: {
-          material: true,
-          skill: true,
-          questions: { include: { options: true } },
+          course: { include: { skills: { include: { skill: true } } } },
         },
       },
+      questions: { include: { question: { include: { options: true } } } },
     },
   });
 
   if (!result) throw new Error("Assignment result not found");
   if (result.userId !== userId) throw new Error("You cannot submit this assignment result");
+  if (result.status === "COMPLETED") throw new Error("This assignment result is already completed");
 
-  const validQuestionIds = new Set(result.assignment.questions.map((question) => question.id));
+  const selectedQuestions = result.questions.map((item) => item.question);
+  const validQuestionIds = new Set(selectedQuestions.map((question) => question.id));
+  if (answers.length > selectedQuestions.length) {
+    throw new Error(`You can only answer ${selectedQuestions.length} selected questions`);
+  }
+
   for (const answer of answers) {
     if (!validQuestionIds.has(answer.questionId)) {
-      throw new Error("One or more answers do not belong to this assignment");
+      throw new Error("One or more answers do not belong to this exam attempt");
     }
   }
 
@@ -58,14 +88,14 @@ export async function submitAssignment(
   });
 
   const selectedOptionIds = new Set(answers.map((answer) => answer.selectedOptionId));
-  const correct = result.assignment.questions.reduce((count, question) => {
+  const correct = selectedQuestions.reduce((count, question) => {
     const selectedCorrectOption = question.options.find(
       (option) => option.isCorrect && selectedOptionIds.has(option.id)
     );
     return selectedCorrectOption ? count + 1 : count;
   }, 0);
 
-  const total = result.assignment.questions.length;
+  const total = selectedQuestions.length;
   const score = total === 0 ? 0 : Math.round((correct / total) * 100);
   const passed = score >= result.assignment.passingScore;
 
@@ -79,32 +109,37 @@ export async function submitAssignment(
     include: {
       assignment: {
         include: {
-          material: true,
-          skill: true,
+          course: { include: { skills: { include: { skill: true } } } },
         },
       },
       answers: true,
     },
   });
 
+  const courseSkills = result.assignment.course.skills.map((courseSkill) => courseSkill.skill);
+
   if (passed) {
-    await prisma.userSkill.upsert({
-      where: {
-        userId_skillId: {
-          userId,
-          skillId: result.assignment.skillId,
-        },
-      },
-      create: {
-        userId,
-        skillId: result.assignment.skillId,
-        completionStatus: true,
-      },
-      update: { completionStatus: true },
-    });
+    await prisma.$transaction(
+      courseSkills.map((skill) =>
+        prisma.userSkill.upsert({
+          where: {
+            userId_skillId: {
+              userId,
+              skillId: skill.id,
+            },
+          },
+          create: {
+            userId,
+            skillId: skill.id,
+            completionStatus: true,
+          },
+          update: { completionStatus: true },
+        })
+      )
+    );
   }
 
-  const courseId = result.assignment.material.courseId;
+  const courseId = result.assignment.courseId;
   let certificate = null;
   let enrollment = null;
 
@@ -131,15 +166,39 @@ export async function submitAssignment(
     });
 
     if (passed) {
-      certificate = await prisma.certificate.upsert({
-        where: {
-          userId_courseId: {
-            userId,
-            courseId,
+      certificate = await prisma.$transaction(async (tx) => {
+        const savedCertificate = await tx.certificate.upsert({
+          where: {
+            userId_courseId: {
+              userId,
+              courseId,
+            },
           },
-        },
-        create: { userId, courseId },
-        update: {},
+          create: { userId, courseId },
+          update: {},
+        });
+
+        await tx.certificateSkill.deleteMany({
+          where: { certificateId: savedCertificate.id },
+        });
+
+        if (courseSkills.length > 0) {
+          await tx.certificateSkill.createMany({
+            data: courseSkills.map((skill) => ({
+              certificateId: savedCertificate.id,
+              skillId: skill.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        return tx.certificate.findUniqueOrThrow({
+          where: { id: savedCertificate.id },
+          include: {
+            course: true,
+            skills: { include: { skill: true } },
+          },
+        });
       });
     }
   }
@@ -150,7 +209,7 @@ export async function submitAssignment(
     correct,
     total,
     passed,
-    awardedSkill: passed ? result.assignment.skill : null,
+    awardedSkills: passed ? courseSkills : [],
     certificate,
     enrollment,
   };
@@ -165,14 +224,13 @@ export async function getUserLearningProfile(userId: string) {
       email: true,
       role: true,
       userSkills: { include: { skill: true } },
-      certificates: { include: { course: true } },
+      certificates: { include: { course: true, skills: { include: { skill: true } } } },
       enrollments: { include: { course: true } },
       assignmentResults: {
         include: {
           assignment: {
             include: {
-              skill: true,
-              material: true,
+              course: { include: { skills: { include: { skill: true } } } },
             },
           },
         },

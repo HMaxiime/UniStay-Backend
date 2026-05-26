@@ -6,8 +6,8 @@ import { startAssignment } from "../utils/learning.service.js";
 export async function startAssignmentResult(req: AuthRequest, res: Response) {
   try {
     const data = startAssignmentSchema.parse(req.body);
-    const userId = req.userId ?? data.userId;
-    if (!userId) return res.status(400).json({ error: "userId is required" });
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "Authentication required" });
 
     const result = await startAssignment(userId, data.assignmentId);
     res.status(201).json(result);

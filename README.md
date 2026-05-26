@@ -1,19 +1,18 @@
 # UniStay+ Backend API
 
-UniStay+ is a backend API for student housing, bookings, jobs, job applications, learning materials, assignments, and user management.
+UniStay+ is an Express + TypeScript backend for student housing, bookings, jobs, applications, learning courses, exams, certificates, users, and uploads.
 
 ## Tech Stack
 
-- Node.js
-- Express
+- Node.js and Express
 - TypeScript
-- Prisma
+- Prisma ORM
 - PostgreSQL
 - JWT authentication
 - Cloudinary uploads
 - Swagger API docs
 
-## Getting Started
+## Setup
 
 Install dependencies:
 
@@ -21,13 +20,33 @@ Install dependencies:
 npm install
 ```
 
-Generate Prisma client:
+Create `.env` from `.env.example`, then set at least:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/unistay_db"
+JWT_SECRET="your-secret"
+PORT=3000
+```
+
+Generate Prisma Client:
 
 ```bash
 npx prisma generate
 ```
 
-Run in development:
+Sync database schema:
+
+```bash
+npx prisma db push
+```
+
+Seed default users:
+
+```bash
+npx prisma db seed
+```
+
+Run development server:
 
 ```bash
 npm run dev
@@ -45,244 +64,351 @@ Start compiled app:
 npm start
 ```
 
-Default local server:
+## URLs
 
 ```text
-http://localhost:3000
+API: http://localhost:3000
+Swagger: http://localhost:3000/api-docs
+OpenAPI JSON: http://localhost:3000/api-docs.json
 ```
 
-Swagger documentation:
+Swagger route docs live in:
 
 ```text
-http://localhost:3000/api-docs
+src/Docs/swagger.docs.ts
 ```
 
-Raw OpenAPI JSON:
-
-```text
-http://localhost:3000/api-docs.json
-```
+Routes should stay focused on routing only.
 
 ## Authentication
 
-Protected routes require a JWT bearer token:
+Protected routes require:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-Roles used by the API:
+Roles:
 
 | Role | Purpose |
 | --- | --- |
-| `STUDENT` | Book housing, apply for jobs, enroll in courses, submit assignments |
-| `HOST` | Manage housing listings and related bookings |
-| `EMPLOYER` | Manage jobs |
+| `STUDENT` | Book housing, apply for jobs, enroll, take exams |
+| `HOST` | Manage housing listings and listing bookings |
+| `EMPLOYER` | Manage jobs and job applications |
 | `ADMIN` | Administrative access |
 
-## Environment Variables
-
-Create a `.env` file using `.env.example` as a guide.
-
-Common variables:
-
-| Variable | Description |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret used to sign JWTs |
-| `PORT` | Server port, defaults to `3000` |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-
-## API Endpoints
-
-Base URL:
+Default seed accounts:
 
 ```text
-/api
+admin@unistay.com / Admin@123
+employer@unistay.com / Employer@123
+host@unistay.com / Host@123
+student@unistay.com / Student@123
 ```
+
+## Main Endpoints
 
 ### Auth
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `POST` | `/api/auth/register` | Public | Register a user |
-| `POST` | `/api/auth/login` | Public | Login and receive a token |
-| `GET` | `/api/auth/me` | Authenticated | Get current user profile |
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/auth/register` | Register user |
+| `POST` | `/api/auth/login` | Login and receive JWT |
+| `GET` | `/api/auth/me` | Current authenticated user |
 
 ### Users
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/users` | Admin | List users |
-| `GET` | `/api/users/:id` | Admin | Get user by ID |
-| `PATCH` | `/api/users/:id/role` | Admin | Update user role |
-| `PATCH` | `/api/users/:id/active` | Admin | Activate or deactivate user |
-| `DELETE` | `/api/users/:id` | Admin | Delete user |
+| Method | Endpoint | Access |
+| --- | --- | --- |
+| `GET` | `/api/users` | Admin |
+| `GET` | `/api/users/:id` | Admin |
+| `PATCH` | `/api/users/:id/role` | Admin |
+| `PATCH` | `/api/users/:id/active` | Admin |
+| `DELETE` | `/api/users/:id` | Admin |
 
-### Housing Listings
+### Housing
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/listings` | Public | List verified listings |
-| `GET` | `/api/listings/:id` | Public | Get listing by ID |
-| `GET` | `/api/listings/me/listings` | Host/Admin | Get authenticated host listings |
-| `POST` | `/api/listings` | Host/Admin | Create listing with optional images |
-| `PUT` | `/api/listings/:id` | Owner/Admin | Update listing |
-| `DELETE` | `/api/listings/:id` | Owner/Admin | Delete listing |
-| `PATCH` | `/api/listings/:id/verify` | Admin | Verify or reject listing |
-| `POST` | `/api/listings/:id/images` | Owner/Admin | Upload listing images |
-| `DELETE` | `/api/listings/:id/images` | Owner/Admin | Delete one listing image by `imageUrl` query |
-
-Listing filters:
-
-| Query | Description |
-| --- | --- |
-| `location` | Filter by location |
-| `min_price` | Minimum price |
-| `max_price` | Maximum price |
-| `bedrooms` | Bedroom count |
-| `availability` | `true` or `false` |
-| `page` | Page number |
-| `limit` | Results per page |
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/listings` | List listings |
+| `GET` | `/api/listings/:id` | Get listing |
+| `GET` | `/api/listings/me/listings` | Host listings |
+| `POST` | `/api/listings` | Create listing |
+| `PUT` | `/api/listings/:id` | Update listing |
+| `DELETE` | `/api/listings/:id` | Delete listing |
+| `PATCH` | `/api/listings/:id/verify` | Verify/reject listing |
+| `POST` | `/api/listings/:id/images` | Upload images |
+| `DELETE` | `/api/listings/:id/images?imageUrl=...` | Delete image |
 
 ### Bookings
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/bookings` | Admin | List all bookings |
-| `POST` | `/api/bookings` | Student | Create booking |
-| `GET` | `/api/bookings/my` | Student | List current student's bookings |
-| `GET` | `/api/bookings/listing/:housingId` | Host/Admin | List bookings for a listing |
-| `GET` | `/api/bookings/:id` | Student/Host/Admin | Get booking by ID |
-| `PATCH` | `/api/bookings/:id/payment-proof` | Student owner | Submit payment proof URL |
-| `PATCH` | `/api/bookings/:id/cancel` | Student/Admin | Cancel booking |
-| `PATCH` | `/api/bookings/:id/confirm` | Host/Admin | Confirm booking |
-| `PATCH` | `/api/bookings/:id/reject` | Host/Admin | Reject booking |
-| `PATCH` | `/api/bookings/:id/complete` | Host/Admin | Complete booking |
-
-Create booking body:
-
-```json
-{
-  "housingId": "listing-id",
-  "checkIn": "2026-06-01T00:00:00.000Z",
-  "checkOut": "2026-06-05T00:00:00.000Z"
-}
-```
-
-Booking rules:
-
-- Listing must be verified and available.
-- Students cannot book their own listing.
-- `checkOut` must be after `checkIn`.
-- Overlapping pending or confirmed bookings are blocked.
-- `totalAmount` is calculated from listing price and number of nights.
-- Payment proof is required before confirmation.
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/bookings` | Admin booking list |
+| `POST` | `/api/bookings` | Student creates booking |
+| `GET` | `/api/bookings/my` | Student bookings |
+| `GET` | `/api/bookings/listing/:housingId` | Listing bookings |
+| `GET` | `/api/bookings/:id` | Booking details |
+| `PATCH` | `/api/bookings/:id/payment-proof` | Upload proof URL |
+| `PATCH` | `/api/bookings/:id/cancel` | Cancel booking |
+| `PATCH` | `/api/bookings/:id/confirm` | Confirm booking |
+| `PATCH` | `/api/bookings/:id/reject` | Reject booking |
+| `PATCH` | `/api/bookings/:id/complete` | Complete booking |
 
 ### Jobs
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/jobs` | Public | List jobs |
-| `GET` | `/api/jobs/:id` | Public | Get job by ID |
-| `POST` | `/api/jobs` | Employer/Admin | Create job |
-| `PUT` | `/api/jobs/:id` | Owner/Admin | Update job |
-| `DELETE` | `/api/jobs/:id` | Owner/Admin | Delete job |
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/jobs` | List jobs |
+| `GET` | `/api/jobs/:id` | Get job |
+| `POST` | `/api/jobs` | Create job |
+| `PUT` | `/api/jobs/:id` | Update job |
+| `DELETE` | `/api/jobs/:id` | Delete job |
 
-### Job Applications
+### Applications
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/applications/my` | Student | List current student's applications |
-| `POST` | `/api/applications/jobs/:jobId` | Student | Apply for a job |
-| `GET` | `/api/applications/jobs/:jobId` | Employer/Admin | List applications for a job |
-| `PATCH` | `/api/applications/:applicationId/status` | Employer/Admin | Update application status |
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/applications/my` | Student applications |
+| `POST` | `/api/applications/jobs/:jobId` | Apply to job |
+| `GET` | `/api/applications/jobs/:jobId` | Job applications |
+| `PATCH` | `/api/applications/:applicationId/status` | Update status |
 
-Application statuses:
+## Learning Flow
 
-```text
-PENDING, ACCEPTED, REJECTED
+Skills are assigned to courses. Materials belong to courses. Exams/assignments belong to courses, not materials.
+
+When a student passes a course exam:
+
+- all course skills are marked complete for the student,
+- a course certificate is created automatically,
+- all course skills are copied into the `CertificateSkill` table and attached to that certificate automatically.
+
+Students can take the exam directly without completing all course materials first.
+
+### Skills
+
+| Method | Endpoint |
+| --- | --- |
+| `GET` | `/api/skills` |
+| `GET` | `/api/skills/:id` |
+| `POST` | `/api/skills` |
+| `PUT` | `/api/skills/:id` |
+| `DELETE` | `/api/skills/:id` |
+
+Create skill:
+
+```json
+{
+  "name": "JavaScript",
+  "category": "Programming",
+  "level": "BEGINNER"
+}
 ```
 
 ### Courses
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/courses` | Public | List courses |
-| `GET` | `/api/courses/:id` | Public | Get course by ID |
-| `POST` | `/api/courses` | Authenticated | Create course |
-| `PUT` | `/api/courses/:id` | Authenticated | Update course |
-| `DELETE` | `/api/courses/:id` | Authenticated | Delete course |
-| `PUT` | `/api/courses/:id/publish` | Authenticated | Publish course |
+| Method | Endpoint |
+| --- | --- |
+| `GET` | `/api/courses` |
+| `GET` | `/api/courses/:id` |
+| `POST` | `/api/courses` |
+| `PUT` | `/api/courses/:id` |
+| `DELETE` | `/api/courses/:id` |
+| `PUT` | `/api/courses/:id/publish` |
+
+Create or update course with skills:
+
+```json
+{
+  "title": "Web Development Basics",
+  "description": "Learn frontend and backend foundations.",
+  "thumbnail": "https://example.com/web-dev.jpg",
+  "category": "Programming",
+  "skillIds": ["SKILL_ID_1", "SKILL_ID_2"]
+}
+```
+
+To remove all skills from a course:
+
+```json
+{
+  "skillIds": []
+}
+```
 
 ### Materials
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/materials` | Public | List materials |
-| `GET` | `/api/materials/:id` | Public | Get material by ID |
-| `POST` | `/api/materials` | Public | Create material |
-| `PUT` | `/api/materials/:id` | Public | Update material |
-| `DELETE` | `/api/materials/:id` | Public | Delete material |
-| `POST` | `/api/material-skills` | Authenticated | Attach skill to material |
-| `DELETE` | `/api/material-skills/:id` | Authenticated | Remove material-skill link |
+| Method | Endpoint |
+| --- | --- |
+| `GET` | `/api/materials` |
+| `GET` | `/api/materials/:id` |
+| `POST` | `/api/materials/course/:courseId` |
+| `PUT` | `/api/materials/:id` |
+| `DELETE` | `/api/materials/:id` |
 
-### Skills
+Create material:
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/skills` | Public | List skills |
-| `GET` | `/api/skills/:id` | Public | Get skill by ID |
-| `POST` | `/api/skills` | Public | Create skill |
-| `PUT` | `/api/skills/:id` | Public | Update skill |
-| `DELETE` | `/api/skills/:id` | Public | Delete skill |
+```json
+{
+  "title": "JavaScript Introduction",
+  "description": "Basic JavaScript concepts.",
+  "type": "VIDEO",
+  "duration": 45
+}
+```
 
-### Assignments
+### Assignments And Exams
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/assignments` | Public | List assignments |
-| `GET` | `/api/assignments/:id` | Public | Get assignment by ID |
-| `POST` | `/api/assignments` | Authenticated | Create assignment |
-| `PUT` | `/api/assignments/:id` | Authenticated | Update assignment |
-| `DELETE` | `/api/assignments/:id` | Authenticated | Delete assignment |
+Assignments are course exams. You can upload any number of questions. When a student starts an exam, the backend randomly selects up to 10 questions for that attempt.
 
-### Questions and Options
+`isStandalone` marks an exam that can be taken directly by a student who already has the knowledge. The current backend allows students to start authenticated exams directly, and this field is kept so stricter course-path rules can be added later.
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `POST` | `/api/questions` | Public | Create question |
-| `GET` | `/api/questions/:id` | Public | Get question by ID |
-| `PUT` | `/api/questions/:id` | Public | Update question |
-| `DELETE` | `/api/questions/:id` | Public | Delete question |
-| `POST` | `/api/options` | Public | Create answer option |
-| `PUT` | `/api/options/:id` | Public | Update answer option |
-| `DELETE` | `/api/options/:id` | Public | Delete answer option |
+| Method | Endpoint |
+| --- | --- |
+| `GET` | `/api/assignments` |
+| `GET` | `/api/assignments/:id` |
+| `POST` | `/api/assignments` |
+| `PUT` | `/api/assignments/:id` |
+| `DELETE` | `/api/assignments/:id` |
 
-### Learning Progress
+Create assignment:
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `POST` | `/api/enrollments` | Student | Enroll in a course |
-| `POST` | `/api/assignment-results/start` | Student | Start an assignment |
-| `POST` | `/api/student-answers` | Student | Submit assignment answers |
+```json
+{
+  "title": "Web Development Final Exam",
+  "courseId": "COURSE_ID",
+  "isStandalone": true,
+  "timeLimit": 30,
+  "passingScore": 70
+}
+```
 
-### Uploads
+Add question:
 
-| Method | Endpoint | Access | Description |
-| --- | --- | --- | --- |
-| `GET` | `/api/uploads` | Public | List uploaded files |
-| `GET` | `/api/uploads/:id` | Public | Get upload by ID |
-| `POST` | `/api/uploads` | Public | Upload a file |
-| `DELETE` | `/api/uploads/:id` | Public | Delete upload |
+```json
+{
+  "assignmentId": "ASSIGNMENT_ID",
+  "text": "Which keyword declares a constant in JavaScript?"
+}
+```
 
-Upload body uses `multipart/form-data` with a `file` field.
+Add options:
 
-## Health Check
+```json
+{
+  "questionId": "QUESTION_ID",
+  "text": "const",
+  "isCorrect": true
+}
+```
+
+```json
+{
+  "questionId": "QUESTION_ID",
+  "text": "var",
+  "isCorrect": false
+}
+```
+
+### Student Exam Flow
+
+1. Login as a student.
+2. Authorize Swagger with `Bearer <token>`.
+3. Start the exam.
+4. Answer only the random questions returned by the start response.
+5. If the score passes, the certificate is returned automatically.
+
+Start exam:
+
+```http
+POST /api/assignment-results/start
+```
+
+```json
+{
+  "assignmentId": "ASSIGNMENT_ID"
+}
+```
+
+Submit answers:
+
+```http
+POST /api/student-answers
+```
+
+```json
+{
+  "assignmentResultId": "ASSIGNMENT_RESULT_ID",
+  "answers": [
+    {
+      "questionId": "QUESTION_ID_FROM_START_RESPONSE",
+      "selectedOptionId": "OPTION_ID_SELECTED_BY_STUDENT"
+    }
+  ]
+}
+```
+
+Passing response includes:
+
+```json
+{
+  "passed": true,
+  "certificate": {
+    "id": "CERTIFICATE_ID",
+    "courseId": "COURSE_ID",
+    "skills": [
+      {
+        "skill": {
+          "id": "SKILL_ID",
+          "name": "JavaScript"
+        }
+      }
+    ]
+  }
+}
+```
+
+The `certificate.skills` array comes from rows in `CertificateSkill`. Those rows are filled automatically from the course's selected skills when the student passes.
+
+### Enrollment
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/` | Returns API running message |
+| `POST` | `/api/enrollments` | Enroll authenticated student in a course |
 
+```json
+{
+  "courseId": "COURSE_ID"
+}
+```
+
+## Uploads
+
+| Method | Endpoint |
+| --- | --- |
+| `GET` | `/api/uploads` |
+| `GET` | `/api/uploads/:id` |
+| `POST` | `/api/uploads` |
+| `DELETE` | `/api/uploads/:id` |
+
+Uploads use `multipart/form-data` with:
+
+```text
+file: binary
+materialId: string
+```
+
+## Health Check
+
+```http
+GET /
+```
+
+Returns:
+
+```json
+{
+  "message": "UniStay+ API is running"
+}
+```
