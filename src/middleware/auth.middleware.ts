@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_SECRET = process.env.JWT_SECRET || "mysecretkey123";
 
 // ─── authenticate ─────────────────────────────────────────────────────────────
 

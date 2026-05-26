@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import authRoutes from "./routes/auth.routes.js";
 import skillsRoutes from "./routes/skills.routes.js";
 import courseRoutes from "./routes/course.routes.js";
@@ -9,7 +9,6 @@ import jobsRoutes from "./routes/jobs.routes.js";
 import applicationsRoutes from "./routes/applications.routes.js";
 import housingRoutes from "./routes/housing.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
-import materialSkillsRoutes from "./routes/material-skills.routes.js";
 import assignmentsRoutes from "./routes/assignments.routes.js";
 import questionsRoutes from "./routes/questions.routes.js";
 import optionsRoutes from "./routes/options.routes.js";
@@ -21,6 +20,17 @@ import uploadsRoutes from "./routes/uploads.routes.js";
 const app = express();
 
 app.use(express.json());
+
+const jsonErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
+  if (error instanceof SyntaxError && "body" in error) {
+    return res.status(400).json({ error: "Invalid JSON body" });
+  }
+
+  next(error);
+};
+
+app.use(jsonErrorHandler);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/skills", skillsRoutes);
 app.use("/api/courses", courseRoutes);
@@ -30,7 +40,6 @@ app.use("/api/jobs", jobsRoutes);
 app.use("/api/applications", applicationsRoutes);
 app.use("/api/listings", housingRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/material-skills", materialSkillsRoutes);
 app.use("/api/assignments", assignmentsRoutes);
 app.use("/api/questions", questionsRoutes);
 app.use("/api/options", optionsRoutes);
