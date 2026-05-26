@@ -1,75 +1,18 @@
-import express from "express";
+import express, { type RequestHandler } from "express";
 import {
   createQuestion,
   deleteQuestion,
   getQuestionById,
   updateQuestion,
 } from "../controllers/questions.controller.js";
+import { authenticate } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
+const auth = authenticate as RequestHandler;
 
-/**
- * @swagger
- * /api/questions:
- *   post:
- *     summary: Create a question
- *     tags: [Questions]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/QuestionInput'
- *     responses:
- *       201:
- *         description: Question created
- * /api/questions/{id}:
- *   get:
- *     summary: Get question by ID
- *     tags: [Questions]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Question found
- *   put:
- *     summary: Update question
- *     tags: [Questions]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/QuestionInput'
- *     responses:
- *       200:
- *         description: Question updated
- *   delete:
- *     summary: Delete question
- *     tags: [Questions]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       204:
- *         description: Question deleted
- */
-router.post("/", createQuestion);
+router.post("/",  createQuestion);
 router.get("/:id", getQuestionById);
-router.put("/:id", updateQuestion);
-router.delete("/:id", deleteQuestion);
+router.put("/:id", auth, updateQuestion);
+router.delete("/:id", auth, deleteQuestion);
 
 export default router;
