@@ -83,7 +83,10 @@ const options: swaggerJsdoc.Options = {
             description: { type: "string" },
             thumbnail: { type: "string" },
             category: { type: "string" },
-            uploadedBy: { type: "string" },
+            skillIds: {
+              type: "array",
+              items: { type: "string" },
+            },
           },
         },
         SkillInput: {
@@ -101,18 +104,14 @@ const options: swaggerJsdoc.Options = {
             title: { type: "string" },
             description: { type: "string" },
             type: { type: "string", enum: ["VIDEO", "PDF", "ARTICLE", "QUIZ"] },
-            uploadedBy: { type: "string" },
             duration: { type: "number" },
-            courseId: { type: "string" },
           },
         },
         AssignmentInput: {
           type: "object",
           properties: {
             title: { type: "string" },
-            materialId: { type: "string" },
-            skillId: { type: "string" },
-            questionCount: { type: "number" },
+            courseId: { type: "string" },
             passingScore: { type: "number" },
             timeLimit: { type: "number" },
           },
@@ -185,7 +184,7 @@ const options: swaggerJsdoc.Options = {
       },
     },
   },
-  apis: ["./src/routes/*.ts"],
+  apis: ["./src/Docs/*.ts"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

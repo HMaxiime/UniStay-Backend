@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type RequestHandler } from "express";
 import {
   createMaterial,
   deleteMaterial,
@@ -7,78 +7,16 @@ import {
   updateMaterial,
 } from "../controllers/materials.controller.js";
 
+import { authenticate } from "../middleware/auth.middleware.js";
+
 
 const router = express.Router();
+const auth = authenticate as RequestHandler;
 
-/**
- * @swagger
- * /api/materials:
- *   get:
- *     summary: List materials
- *     tags: [Materials]
- *     responses:
- *       200:
- *         description: Materials list
- *   post:
- *     summary: Create a material
- *     tags: [Materials]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/MaterialInput'
- *     responses:
- *       201:
- *         description: Material created
- * /api/materials/{id}:
- *   get:
- *     summary: Get material by ID
- *     tags: [Materials]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Material found
- *   put:
- *     summary: Update material
- *     tags: [Materials]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/MaterialInput'
- *     responses:
- *       200:
- *         description: Material updated
- *   delete:
- *     summary: Delete material
- *     tags: [Materials]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       204:
- *         description: Material deleted
- */
-router.post("/", createMaterial);
+router.post("/course/:courseId", auth, createMaterial);
 router.get("/", getMaterials);
 router.get("/:id", getMaterialById);
-router.put("/:id", updateMaterial);
-router.delete("/:id", deleteMaterial);
+router.put("/:id", auth, updateMaterial);
+router.delete("/:id", auth, deleteMaterial);
 
 export default router;
