@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
     "build": "tsc",
+    "postinstall": "npm run db:generate && npm run build",
     "start": "node dist/server.js",
     "db:seed": "prisma db seed",
     "db:generate": "prisma generate",
