@@ -26,3 +26,14 @@ export const bookingConfirmationEmail = (fullName: string, housingTitle: string,
     <p>Check-out: ${checkOut}</p>
   `,
 })
+
+export const bookingCancellationEmail = (fullName: string, housingTitle: string, checkIn: string, checkOut: string, listingUrl: string) => ({
+  subject: 'Booking Cancelled – UniStay+',
+  html: `
+    <h1>Booking Cancelled</h1>
+    <p>Hi ${fullName}, your booking for <strong>${housingTitle}</strong> has been cancelled.</p>
+    <p>Check-in: ${checkIn}</p>
+    <p>Check-out: ${checkOut}</p>
+    <p>You can browse other listings here: <a href="${listingUrl}">${listingUrl}</a></p>
+  `,
+})
