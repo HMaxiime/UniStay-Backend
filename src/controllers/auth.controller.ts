@@ -109,12 +109,3 @@ export const resetPasswordHandler = async (req: Request, res: Response) => {
   }
 }
 
-export const getUserByIdHandler = async (req: Request, res: Response) => {
-  try {
-    const id = req.params['id'] as string
-    const user = await getUserById(id)
-    return res.status(200).json({ user })
-  } catch (error: any) {
-    return res.status(404).json({ message: error.message })
-  }
-}
