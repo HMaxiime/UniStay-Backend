@@ -32,3 +32,15 @@ export const sendResetEmail = async (toEmail: string, resetToken: string) => {
     `,
   })
 }
+
+export const sendEmail = async (to: string, subject: string, content: { subject?: string; html?: string } | string) => {
+  const html = typeof content === 'string' ? content : content.html || ''
+  const mailSubject = typeof content === 'string' ? subject : content.subject || subject
+
+  await transporter.sendMail({
+    from: `"UniStay+" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: mailSubject,
+    html,
+  })
+}

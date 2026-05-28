@@ -125,8 +125,6 @@ model Booking {
   housingId String
   status    BookingStatus @default(PENDING)
   paymentStatus  PaymentStatus @default(UNPAID)
-  paymentProof   String?     
-  paymentRef     String?     
   totalAmount    Float? 
   checkIn   DateTime
   checkOut  DateTime
