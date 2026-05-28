@@ -1,51 +1,21 @@
-import { Router, type RequestHandler } from "express";
+import express, { type RequestHandler } from "express";
 import {
-  getAllBookings,
-  getMyBookings,
-  getBookingById,
   createBooking,
-  uploadPaymentProof,
-  confirmBooking,
-  rejectBooking,
-  cancelBooking,
-  completeBooking,
-  getBookingsByListing,
+  deleteBooking,
+  getAllBookings,
+  getBookingById,
+  updateBooking,
+  changeBookingStatus,
 } from "../controllers/booking.controller.js";
-import {
-  authenticate,
-  requireAdmin,
-  authorize,
-} from "../middleware/auth.middleware.js";
+import { authenticate, requireStudent, requireHost } from "../middleware/auth.middleware.js";
 
-const router = Router();
+const router = express.Router();
 
-const auth = authenticate as RequestHandler;
-const admin = requireAdmin as RequestHandler;
-const student = authorize(["STUDENT"]) as RequestHandler;
-const studentOrAdmin = authorize(["STUDENT", "ADMIN"]) as RequestHandler;
-const hostOrAdmin = authorize(["HOST", "ADMIN"]) as RequestHandler;
-const bookingViewer = authorize(["STUDENT", "HOST", "ADMIN"]) as RequestHandler;
-
-router.use(auth);
-
-router.get("/", admin, getAllBookings );
-
-router.get("/my", student, getMyBookings );
-
-router.post("/", student, createBooking );
-
-router.patch("/:id/payment-proof", student, uploadPaymentProof );
-
-router.patch("/:id/cancel", studentOrAdmin, cancelBooking );
-
-router.patch("/:id/confirm", hostOrAdmin, confirmBooking );
-
-router.patch("/:id/reject", hostOrAdmin, rejectBooking );
-
-router.patch("/:id/complete", hostOrAdmin, completeBooking );
-
-router.get("/listing/:housingId", hostOrAdmin, getBookingsByListing );
-
-router.get("/:id", bookingViewer, getBookingById );
+router.get("/", authenticate as RequestHandler  , getAllBookings);
+router.get("/:id", authenticate as RequestHandler , requireStudent as RequestHandler , getBookingById);
+router.post("/",authenticate as RequestHandler , requireStudent as RequestHandler , createBooking);
+router.delete("/:id", authenticate as RequestHandler , requireStudent as RequestHandler , deleteBooking);
+router.put("/approve/:id", authenticate as RequestHandler  , requireHost as RequestHandler , changeBookingStatus);
+router.put("/:id", authenticate as RequestHandler , requireStudent as RequestHandler , updateBooking);
 
 export default router;

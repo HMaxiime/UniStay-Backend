@@ -203,6 +203,7 @@
  *         description: Authentication required
  */
 
+
 /**
  * @swagger
  * /api/bookings:
@@ -1047,4 +1048,3 @@
  *       200:
  *         description: User active status updated
  */
-
