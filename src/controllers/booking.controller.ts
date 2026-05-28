@@ -141,8 +141,8 @@ export const getBookingById = async (req: Request, res: Response) => {
 export const createBooking = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { housingId, housing_id, checkIn: rawCheckIn, checkOut: rawCheckOut } = req.body;
-    const targetHousingId: string | undefined = housingId ?? housing_id;
+    const { housingId, checkIn: rawCheckIn, checkOut: rawCheckOut } = req.body;
+    const targetHousingId: string = housingId;
     const checkIn = parseBookingDate(rawCheckIn);
     const checkOut = parseBookingDate(rawCheckOut);
 
@@ -233,57 +233,8 @@ export const createBooking = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+//Make payment
 
-// ─── UPLOAD PAYMENT PROOF (Student) ──────────────────────────────────────────
-// Student uploads a receipt URL after paying manually (Option B).
-export const uploadPaymentProof = async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    const userId = req.user?.id;
-    const { paymentProof } = req.body; // URL to receipt image / PDF
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-    if (!paymentProof) {
-      return res.status(400).json({ success: false, message: "paymentProof URL is required" });
-    }
-
-    const booking = await prisma.booking.findUnique({ where: { id } });
-
-    if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
-    }
-    if (booking.userId !== userId) {
-      return res.status(403).json({ success: false, message: "Forbidden" });
-    }
-    if (booking.status !== "PENDING") {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot upload proof for a booking with status: ${booking.status}`,
-      });
-    }
-
-    const updated = await prisma.booking.update({
-      where: { id },
-      data: {
-        paymentProof,
-        paymentStatus: "PENDING_VERIFICATION",
-      },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Payment proof submitted. Awaiting host verification.",
-      data: updated,
-    });
-  } catch (error) {
-    console.error("uploadPaymentProof error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
-
-// ─── CONFIRM BOOKING (Host / Admin) ──────────────────────────────────────────
 // Host verifies payment proof then confirms → marks listing unavailable.
 export const confirmBooking = async (req: Request, res: Response) => {
   try {
@@ -305,9 +256,9 @@ export const confirmBooking = async (req: Request, res: Response) => {
     }
 
     const isHost  = booking.housing.hostId === userId;
-    const isAdmin = userRole === "ADMIN";
 
-    if (!isHost && !isAdmin) {
+
+    if (!isHost) {
       return res.status(403).json({ success: false, message: "Only the host or admin can confirm a booking" });
     }
     if (booking.status !== "PENDING") {

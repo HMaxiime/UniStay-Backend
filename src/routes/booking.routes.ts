@@ -4,12 +4,12 @@ import {
   getMyBookings,
   getBookingById,
   createBooking,
-  uploadPaymentProof,
   confirmBooking,
-  rejectBooking,
-  cancelBooking,
+  rejectBooking ,
   completeBooking,
-  getBookingsByListing,
+  cancelBooking,
+  getBookingsByListing
+  
 } from "../controllers/booking.controller.js";
 import {
   authenticate,
@@ -34,7 +34,6 @@ router.get("/my", student, getMyBookings );
 
 router.post("/", student, createBooking );
 
-router.patch("/:id/payment-proof", student, uploadPaymentProof );
 
 router.patch("/:id/cancel", studentOrAdmin, cancelBooking );
 
