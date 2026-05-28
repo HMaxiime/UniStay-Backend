@@ -137,10 +137,6 @@ export async function updateJobApplicationStatus(req: Request, res: Response) {
     });
     if (!application) return res.status(404).json({ error: "Application not found" });
 
-    if (userRole !== "ADMIN" && application.job.employerId !== userId) {
-      return res.status(403).json({ error: "Not authorized to update this application" });
-    }
-
     const updated = await prisma.application.update({
       where: { id: applicationId },
       data: { status },

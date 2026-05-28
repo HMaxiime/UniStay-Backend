@@ -207,8 +207,8 @@
  * @swagger
  * /api/bookings:
  *   get:
- *     summary: List all bookings
- *     description: Admin only. Supports optional status, page, and limit query filters.
+ *     summary: List bookings
+ *     description: "Returns a paginated list of bookings. Query params: `status`, `page`, `limit`."
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -229,11 +229,9 @@
  *     responses:
  *       200:
  *         description: Bookings list
- *       403:
- *         description: Admin access required
  *   post:
  *     summary: Create a booking
- *     description: Student only. Creates a pending booking for a verified and available listing. Requires check-in and check-out dates.
+ *     description: Student only. Creates a pending booking for a housing item.
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -245,42 +243,15 @@
  *             $ref: '#/components/schemas/BookingInput'
  *     responses:
  *       201:
- *         description: Booking request submitted
+ *         description: Booking created
  *       400:
  *         description: Bad request
  *       409:
- *         description: Duplicate or overlapping active booking
- * /api/bookings/my:
- *   get:
- *     summary: List authenticated student's bookings
- *     tags: [Bookings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [PENDING, CONFIRMED, CANCELLED, REJECTED, COMPLETED]
- *     responses:
- *       200:
- *         description: Student bookings list
- * /api/bookings/listing/{housingId}:
- *   get:
- *     summary: List bookings for a listing
- *     description: Host of the listing or admin only.
- *     tags: [Bookings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: housingId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Listing bookings list
+ *         description: Booking conflict (overlapping dates)
+ */
+
+/**
+ * @swagger
  * /api/bookings/{id}:
  *   get:
  *     summary: Get booking by ID
@@ -298,10 +269,8 @@
  *         description: Booking found
  *       404:
  *         description: Booking not found
- * /api/bookings/{id}/payment-proof:
- *   patch:
- *     summary: Upload payment proof URL
- *     description: Student owner only.
+ *   put:
+ *     summary: Update booking (student)
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -316,13 +285,14 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/PaymentProofInput'
+ *             $ref: '#/components/schemas/BookingInput'
  *     responses:
  *       200:
- *         description: Payment proof submitted
- * /api/bookings/{id}/cancel:
- *   patch:
- *     summary: Cancel booking
+ *         description: Booking updated
+ *       400:
+ *         description: Bad request
+ *   delete:
+ *     summary: Delete or cancel booking (student)
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -334,57 +304,10 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Booking cancelled
- * /api/bookings/{id}/confirm:
- *   patch:
- *     summary: Confirm booking
- *     description: Host of the listing or admin only. Payment proof must already be submitted.
- *     tags: [Bookings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Booking confirmed
- * /api/bookings/{id}/reject:
- *   patch:
- *     summary: Reject booking
- *     description: Host of the listing or admin only.
- *     tags: [Bookings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Booking rejected
- * /api/bookings/{id}/complete:
- *   patch:
- *     summary: Complete booking
- *     description: Host of the listing or admin only.
- *     tags: [Bookings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Booking completed
+ *         description: Booking cancelled/deleted
  */
 
+/**
 /**
  * @swagger
  * /api/courses:
