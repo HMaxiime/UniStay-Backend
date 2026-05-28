@@ -16,6 +16,10 @@ const options: swaggerJsdoc.Options = {
         url: "http://localhost:3000",
         description: "Development server",
       },
+      {
+        url: "https://cdn-unistay.onrender.com",
+        description: "Production server",
+      }
     ],
     tags: [
       { name: "Auth" },
