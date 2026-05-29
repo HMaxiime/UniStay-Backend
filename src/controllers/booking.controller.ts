@@ -162,13 +162,23 @@ export const changeBookingStatus = async (
 
     if (updatedBooking.status === 'CONFIRMED') {
       const emailContent = bookingConfirmationEmail(Bookingdeatails?.user.fullName || '', Bookingdeatails?.housing.title || '', Bookingdeatails?.checkIn?.toDateString() || '', Bookingdeatails?.checkOut?.toDateString() || '')
-      await sendEmail(Bookingdeatails?.user.email || '', 'Booking Confirmed!', emailContent)
+      // Notification email is best-effort: never fail the status update if it can't be sent.
+      try {
+        await sendEmail(Bookingdeatails?.user.email || '', 'Booking Confirmed!', emailContent)
+      } catch (mailError) {
+        console.error('Failed to send booking confirmation email:', mailError)
+      }
       if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CONFIRMED', title: 'Booking confirmed', message: `Your booking for ${Bookingdeatails.housing.title} was confirmed`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
     }
 
     if (updatedBooking.status === 'CANCELLED') {
       const emailContent = bookingCancellationEmail(Bookingdeatails?.user.fullName || '', Bookingdeatails?.housing.title || '', Bookingdeatails?.checkIn?.toDateString() || '', Bookingdeatails?.checkOut?.toDateString() || '', `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/housings`)
-      await sendEmail(Bookingdeatails?.user.email || '', 'Booking Cancelled!', emailContent)
+      // Notification email is best-effort: never fail the status update if it can't be sent.
+      try {
+        await sendEmail(Bookingdeatails?.user.email || '', 'Booking Cancelled!', emailContent)
+      } catch (mailError) {
+        console.error('Failed to send booking cancellation email:', mailError)
+      }
       if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CANCELLED', title: 'Booking cancelled', message: `Your booking for ${Bookingdeatails.housing.title} was cancelled`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
     }
 
