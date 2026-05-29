@@ -6,7 +6,6 @@ import {
   extractCloudinaryPublicId,
 } from "../config/cloudinary.js";
 
-
 function parseAmenities(value: unknown): string[] {
   if (!value) return [];
   if (Array.isArray(value)) return value.map(String);
@@ -20,12 +19,15 @@ function parseAmenities(value: unknown): string[] {
         // fall through to comma-split
       }
     }
-    return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+    return trimmed
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   return [];
 }
 
-// ─── GET ALL LISTINGS (with filters) 
+// ─── GET ALL LISTINGS (with filters)
 export const getListings = async (req: Request, res: Response) => {
   try {
     const {
@@ -40,9 +42,21 @@ export const getListings = async (req: Request, res: Response) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const filters: any = {
-      verificationStatus: "VERIFIED",
-    };
+    const isAdmin = req.user?.role === "ADMIN";
+
+    const filters: any = {};
+
+    // Regular visitors only ever see verified listings. Admins see every
+    // listing regardless of verification status, but may still narrow the
+    // list by passing an explicit ?status= filter.
+    if (!isAdmin) {
+      filters.verificationStatus = "VERIFIED";
+      if (availability !== undefined) {
+        filters.availability = availability === "true";
+      }
+    } else if (req.query["status"]) {
+      filters.verificationStatus = String(req.query["status"]);
+    }
 
     if (location) {
       filters.location = {
@@ -60,10 +74,6 @@ export const getListings = async (req: Request, res: Response) => {
 
     if (bedrooms) {
       filters.bedrooms = Number(bedrooms);
-    }
-
-    if (availability !== undefined) {
-      filters.availability = availability === "true";
     }
 
     const [listings, total] = await Promise.all([
@@ -93,7 +103,9 @@ export const getListings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("getListings error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -103,7 +115,9 @@ export const getListingById = async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     const listing = await prisma.housing.findUnique({
@@ -116,13 +130,17 @@ export const getListingById = async (req: Request, res: Response) => {
     });
 
     if (!listing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     return res.status(200).json({ success: true, data: listing });
   } catch (error) {
     console.error("getListingById error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -133,14 +151,29 @@ export const createListing = async (req: Request, res: Response) => {
     const userRole = req.user?.role;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized - user session not found" });
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message: "Unauthorized - user session not found",
+        });
     }
 
     if (userRole !== "HOST" && userRole !== "ADMIN") {
-      return res.status(403).json({ success: false, message: "Only hosts can create listings" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Only hosts can create listings" });
     }
 
-    const { title, description, location, price, bedrooms, amenities, availability } = req.body;
+    const {
+      title,
+      description,
+      location,
+      price,
+      bedrooms,
+      amenities,
+      availability,
+    } = req.body;
 
     if (!title || !location || price === undefined) {
       return res.status(400).json({
@@ -155,8 +188,12 @@ export const createListing = async (req: Request, res: Response) => {
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       const uploadResults = await Promise.all(
         (req.files as Express.Multer.File[]).map((file) =>
-          uploadBufferToCloudinary(file.buffer, "unistay/housing", file.originalname)
-        )
+          uploadBufferToCloudinary(
+            file.buffer,
+            "unistay/housing",
+            file.originalname,
+          ),
+        ),
       );
       uploadedImages.push(...uploadResults.map((r) => r.url));
     }
@@ -170,7 +207,10 @@ export const createListing = async (req: Request, res: Response) => {
         bedrooms: bedrooms !== undefined ? Number(bedrooms) : null,
         amenities: parseAmenities(amenities),
         images: uploadedImages,
-        availability: availability === undefined || availability === true || availability === "true",
+        availability:
+          availability === undefined ||
+          availability === true ||
+          availability === "true",
         hostId: userId,
         verificationStatus: "PENDING",
       },
@@ -183,7 +223,13 @@ export const createListing = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("createListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      ...(process.env["NODE_ENV"] !== "production" && {
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    });
   }
 };
 
@@ -195,7 +241,9 @@ export const updateListing = async (req: Request, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     if (!userId) {
@@ -205,14 +253,29 @@ export const updateListing = async (req: Request, res: Response) => {
     const existing = await prisma.housing.findUnique({ where: { id } });
 
     if (!existing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (userRole !== "ADMIN" && existing.hostId !== userId) {
-      return res.status(403).json({ success: false, message: "Forbidden - you do not own this listing" });
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden - you do not own this listing",
+        });
     }
 
-    const { title, description, location, price, bedrooms, amenities, availability } = req.body;
+    const {
+      title,
+      description,
+      location,
+      price,
+      bedrooms,
+      amenities,
+      availability,
+    } = req.body;
 
     // Upload any newly attached images and merge with existing ones
     let mergedImages: string[] = existing.images as string[];
@@ -220,8 +283,12 @@ export const updateListing = async (req: Request, res: Response) => {
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       const uploadResults = await Promise.all(
         (req.files as Express.Multer.File[]).map((file) =>
-          uploadBufferToCloudinary(file.buffer, "unistay/housing", file.originalname)
-        )
+          uploadBufferToCloudinary(
+            file.buffer,
+            "unistay/housing",
+            file.originalname,
+          ),
+        ),
       );
       mergedImages = [...mergedImages, ...uploadResults.map((r) => r.url)];
     }
@@ -234,7 +301,9 @@ export const updateListing = async (req: Request, res: Response) => {
         ...(location && { location }),
         ...(price !== undefined && { price: Number(price) }),
         ...(bedrooms !== undefined && { bedrooms: Number(bedrooms) }),
-        ...(amenities !== undefined && { amenities: parseAmenities(amenities) }),
+        ...(amenities !== undefined && {
+          amenities: parseAmenities(amenities),
+        }),
         images: mergedImages,
         ...(availability !== undefined && { availability }),
         // Non-admin edits reset verification so admin must re-approve
@@ -245,7 +314,9 @@ export const updateListing = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
     console.error("updateListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -257,7 +328,9 @@ export const deleteListing = async (req: Request, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     if (!userId) {
@@ -267,11 +340,18 @@ export const deleteListing = async (req: Request, res: Response) => {
     const existing = await prisma.housing.findUnique({ where: { id } });
 
     if (!existing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (userRole !== "ADMIN" && existing.hostId !== userId) {
-      return res.status(403).json({ success: false, message: "Forbidden - you do not own this listing" });
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden - you do not own this listing",
+        });
     }
 
     // Delete all associated Cloudinary images before removing the record
@@ -280,17 +360,23 @@ export const deleteListing = async (req: Request, res: Response) => {
       await Promise.allSettled(
         imageUrls.map((url) => {
           const publicId = extractCloudinaryPublicId(url);
-          return publicId ? deleteFromCloudinary(publicId, "image") : Promise.resolve();
-        })
+          return publicId
+            ? deleteFromCloudinary(publicId, "image")
+            : Promise.resolve();
+        }),
       );
     }
 
     await prisma.housing.delete({ where: { id } });
 
-    return res.status(200).json({ success: true, message: "Listing deleted successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Listing deleted successfully" });
   } catch (error) {
     console.error("deleteListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -302,7 +388,9 @@ export const uploadHousingImages = async (req: Request, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     if (!userId) {
@@ -310,23 +398,36 @@ export const uploadHousingImages = async (req: Request, res: Response) => {
     }
 
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: "No images provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No images provided" });
     }
 
     const existing = await prisma.housing.findUnique({ where: { id } });
 
     if (!existing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (userRole !== "ADMIN" && existing.hostId !== userId) {
-      return res.status(403).json({ success: false, message: "Forbidden - you do not own this listing" });
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden - you do not own this listing",
+        });
     }
 
     const uploadResults = await Promise.all(
       (req.files as Express.Multer.File[]).map((file) =>
-        uploadBufferToCloudinary(file.buffer, "unistay/housing", file.originalname)
-      )
+        uploadBufferToCloudinary(
+          file.buffer,
+          "unistay/housing",
+          file.originalname,
+        ),
+      ),
     );
 
     const newUrls = uploadResults.map((r) => r.url);
@@ -348,7 +449,9 @@ export const uploadHousingImages = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("uploadHousingImages error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -360,7 +463,9 @@ export const deleteHousingImage = async (req: Request, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     if (!userId) {
@@ -371,23 +476,37 @@ export const deleteHousingImage = async (req: Request, res: Response) => {
     const { imageUrl } = req.query;
 
     if (!imageUrl || typeof imageUrl !== "string") {
-      return res.status(400).json({ success: false, message: "imageUrl query parameter is required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "imageUrl query parameter is required",
+        });
     }
 
     const existing = await prisma.housing.findUnique({ where: { id } });
 
     if (!existing) {
-      return res.status(404).json({ success: false, message: "Listing not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Listing not found" });
     }
 
     if (userRole !== "ADMIN" && existing.hostId !== userId) {
-      return res.status(403).json({ success: false, message: "Forbidden - you do not own this listing" });
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Forbidden - you do not own this listing",
+        });
     }
 
     const currentImages = existing.images as string[];
 
     if (!currentImages.includes(imageUrl)) {
-      return res.status(404).json({ success: false, message: "Image not found on this listing" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Image not found on this listing" });
     }
 
     // Remove from Cloudinary
@@ -414,7 +533,9 @@ export const deleteHousingImage = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("deleteHousingImage error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -425,11 +546,15 @@ export const verifyListing = async (req: Request, res: Response) => {
     const userRole = req.user?.role;
 
     if (!id) {
-      return res.status(400).json({ success: false, message: "Listing ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Listing ID is required" });
     }
 
     if (userRole !== "ADMIN") {
-      return res.status(403).json({ success: false, message: "Admin access required" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Admin access required" });
     }
 
     const { status } = req.body;
@@ -453,7 +578,9 @@ export const verifyListing = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("verifyListing error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -474,6 +601,8 @@ export const getMyListings = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: listings });
   } catch (error) {
     console.error("getMyListings error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };

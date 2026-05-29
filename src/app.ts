@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type ErrorRequestHandler } from "express";
+import cors, { type CorsOptions } from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import skillsRoutes from "./routes/skills.routes.js";
 import courseRoutes from "./routes/course.routes.js";
@@ -18,6 +19,40 @@ import studentAnswersRoutes from "./routes/student-answers.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
 
 const app = express();
+
+const PORT = process.env["PORT"] || 3000;
+
+const configuredOrigins = (
+  process.env["CORS_ORIGINS"] ||
+  process.env["FRONTEND_URL"] ||
+  "http://localhost:5173"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set([
+    ...configuredOrigins,
+    `http://localhost:${PORT}`,
+    `http://127.0.0.1:${PORT}`,
+  ]),
+);
+
+const corsOptions: CorsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    callback(new Error(`CORS blocked origin: ${origin}`));
+  },
+  credentials: true,
+};
+
+// CORS must be registered before any routes so that preflight (OPTIONS)
+// requests and the Access-Control-Allow-Origin header are handled correctly.
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
