@@ -13,6 +13,7 @@ import {
 } from "../controllers/housing.controller.js";
 import {
   authenticate,
+  optionalAuthenticate,
   authorize,
   requireAdmin,
 } from "../middleware/auth.middleware.js";
@@ -35,8 +36,8 @@ const upload = multer({
 
 // ─── PUBLIC ROUTES ────────────────────────────────────────────────────────────
  
-router.get("/", getListings);
-router.get("/:id", getListingById);
+router.get("/", optionalAuthenticate, getListings);
+router.get("/:id", optionalAuthenticate, getListingById);
 
 // ─── PROTECTED ROUTES ────────────────────────────────────────────────────────
 // Host: view own listings

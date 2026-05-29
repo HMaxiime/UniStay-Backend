@@ -46,6 +46,29 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// ─── optionalAuthenticate ─────────────────────────────────────────────────────
+// Populates req.user when a valid token is present, but never rejects the
+// request. Use on public routes where authenticated users (e.g. admins) get
+// extended behaviour while anonymous visitors are still served.
+export function optionalAuthenticate(req: Request, _res: Response, next: NextFunction) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    req.user = { id: decoded.id, role: decoded.role };
+    req.userId = decoded.id;
+  } catch {
+    // Invalid token on a public route: ignore and continue as anonymous.
+  }
+
+  next();
+}
+
 // ─── requireHost ──────────────────────────────────────────────────────────────
 export function requireHost(req: Request, res: Response, next: NextFunction) {
   if (req.user?.role !== "HOST") {
