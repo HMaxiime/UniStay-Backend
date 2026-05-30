@@ -3,7 +3,12 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { Role } from '@prisma/client'
 import prisma from '../config/prisma.js'
-import { sendResetEmail } from '../config/email.js'
+import { sendEmail } from '../config/email.js'
+import {
+  welcomeEmail,
+  forgotPasswordEmail,
+  passwordResetSuccessEmail,
+} from '../templates/email.templates.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mysecretkey123'
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 10)
@@ -31,6 +36,14 @@ export const registerUser = async (data: {
       role: data.role,
     },
   })
+
+  // Send welcome email — best-effort, never fail registration if email errors
+  try {
+    const emailContent = welcomeEmail(user.fullName, user.role)
+    await sendEmail(user.email, emailContent.subject, emailContent)
+  } catch (mailError) {
+    console.error('[auth] Failed to send welcome email:', mailError)
+  }
 
   return { id: user.id, email: user.email, role: user.role }
 }
@@ -103,7 +116,15 @@ export const forgotPassword = async (email: string) => {
     data: { resetToken, resetTokenExpiry } as any,
   })
 
-  await sendResetEmail(email, resetToken)
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
+  const emailContent = forgotPasswordEmail(user.fullName, resetLink)
+
+  try {
+    await sendEmail(user.email, emailContent.subject, emailContent)
+  } catch (mailError) {
+    console.error('[auth] Failed to send forgot-password email:', mailError)
+  }
+
   return { message: 'If that email exists, a reset link has been sent' }
 }
 
@@ -123,6 +144,14 @@ export const resetPassword = async (token: string, newPassword: string) => {
     where: { id: user.id },
     data: { password: hashed, resetToken: null, resetTokenExpiry: null } as any,
   })
+
+  // Notify user that their password was successfully changed
+  try {
+    const emailContent = passwordResetSuccessEmail(user.fullName)
+    await sendEmail(user.email, emailContent.subject, emailContent)
+  } catch (mailError) {
+    console.error('[auth] Failed to send password-reset-success email:', mailError)
+  }
 
   return { message: 'Password reset successfully' }
 }
