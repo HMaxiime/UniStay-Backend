@@ -13,10 +13,10 @@ const router = Router()
 const auth = authenticate as unknown as RequestHandler
 const admin = requireAdmin as unknown as RequestHandler
 
-router.get('/', auth, admin, getAllUsersHandler )
-router.get('/:id', auth, admin, getUserByIdHandler )
-router.patch('/:id/role', auth, admin, updateUserRoleHandler )
-router.patch('/:id/active', auth, admin, toggleUserActiveHandler )
-router.delete('/:id', auth, admin, deleteUserHandler )
+router.get('/', auth, admin, getAllUsersHandler as unknown as RequestHandler)
+router.get('/:id', auth, admin, getUserByIdHandler as unknown as RequestHandler)
+router.patch('/:id/role', auth, admin, updateUserRoleHandler as unknown as RequestHandler)
+router.patch('/:id/active', auth, admin, toggleUserActiveHandler as unknown as RequestHandler)
+router.delete('/:id', auth, admin, deleteUserHandler as unknown as RequestHandler)
 
 export default router
