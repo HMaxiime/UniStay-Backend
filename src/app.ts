@@ -1,5 +1,6 @@
 import "dotenv/config";
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
+import cors, { type CorsOptions } from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import skillsRoutes from "./routes/skills.routes.js";
 import courseRoutes from "./routes/course.routes.js";
@@ -19,7 +20,50 @@ import uploadsRoutes from "./routes/uploads.routes.js";
 
 const app = express();
 
+const PORT = process.env["PORT"] || 3000;
+
+// Build the allowed origins list from env or sensible local defaults.
+const configuredOrigins = (
+  process.env["CORS_ORIGINS"] ||
+  process.env["FRONTEND_URL"] ||
+  "http://localhost:5173"
+)
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set([
+    ...configuredOrigins,
+    `http://localhost:${PORT}`,
+    `http://127.0.0.1:${PORT}`,
+  ])
+);
+
+const corsOptions: CorsOptions = {
+  origin(origin, callback) {
+    // Allow server-to-server calls (no origin) and any listed origin.
+    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+};
+
+// CORS must be before all routes so preflight OPTIONS requests are handled.
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Catch malformed JSON bodies before they reach route handlers.
+const jsonErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
+  if (error instanceof SyntaxError && "body" in error) {
+    return res.status(400).json({ error: "Invalid JSON body" });
+  }
+  next(error);
+};
+app.use(jsonErrorHandler);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/skills", skillsRoutes);
 app.use("/api/courses", courseRoutes);
