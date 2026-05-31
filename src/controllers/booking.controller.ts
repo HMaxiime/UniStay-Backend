@@ -199,7 +199,6 @@ export const updateBooking = async (req: Request, res: Response) => {
     console.error('Error updating booking:', error)
     res.status(500).json({ message: 'Error updating booking' })
   }
-<<<<<<< HEAD
 };
 
 // ─── CANCEL BOOKING (Student / Admin) ────────────────────────────────────────
@@ -354,6 +353,3 @@ export const getBookingsByListing = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-=======
-}
->>>>>>> main

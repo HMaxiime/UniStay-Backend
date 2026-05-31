@@ -3,11 +3,7 @@ import type { Request, Response } from "express";
 import prisma from "../config/prisma.js";
 import { createJobSchema } from "../validators/jobs.validator.js";
 
-<<<<<<< HEAD
-export async function getJobs(req: Request, res: Response): Promise<void> {
-=======
-export async function getJobs(_req: Request, res: Response) {
->>>>>>> main
+export async function getJobs(req: Request, res: Response) {
   try {
     const { location, scheduleType, page = "1", limit = "10" } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
@@ -73,7 +69,6 @@ export async function getJobById(req: Request, res: Response): Promise<void> {
   }
 }
 
-<<<<<<< HEAD
 export async function createJob(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user?.id;
@@ -82,22 +77,9 @@ export async function createJob(req: Request, res: Response): Promise<void> {
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
-=======
-export async function createJob(req: Request, res: Response) {
-  try {
-    const parsed = createJobSchema.parse(req.body);
-    const employerId = req.user?.id;
-    if (!employerId) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-    if (req.user?.role !== "EMPLOYER" && req.user?.role !== "ADMIN") {
-      return res.status(403).json({ error: "Only employers can create jobs" });
->>>>>>> main
     }
     if (userRole !== "EMPLOYER" && userRole !== "ADMIN") {
-      res
-        .status(403)
-        .json({ success: false, message: "Only employers can create jobs" });
+      res.status(403).json({ success: false, message: "Only employers can create jobs" });
       return;
     }
 
@@ -120,42 +102,25 @@ export async function createJob(req: Request, res: Response) {
   }
 }
 
-<<<<<<< HEAD
 export async function updateJob(req: Request, res: Response): Promise<void> {
   try {
     const jobId = req.params.id as string;
     const userId = req.user?.id;
     const userRole = req.user?.role;
-=======
-export async function updateJob(req: Request, res: Response) {
-  try {
-    const jobId = req.params.id as string;
-    const parsed = createJobSchema.parse(req.body);
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
 
     if (!userId) {
-      return res.status(401).json({ error: "Authentication required" });
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
     }
->>>>>>> main
 
     const existing = await prisma.job.findUnique({ where: { id: jobId } });
-<<<<<<< HEAD
     if (!existing) {
       res.status(404).json({ success: false, message: "Job not found" });
       return;
-=======
-    if (!existing) return res.status(404).json({ error: "Job not found" });
-
-    if (userRole !== "ADMIN" && existing.employerId !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to update this job" });
->>>>>>> main
     }
 
     if (userRole !== "ADMIN" && existing.employerId !== userId) {
-      res.status(403).json({ success: false, message: "Unauthorized" });
+      res.status(403).json({ success: false, message: "Not authorized to update this job" });
       return;
     }
 
@@ -178,16 +143,16 @@ export async function updateJob(req: Request, res: Response) {
   }
 }
 
-<<<<<<< HEAD
 export async function deleteJob(req: Request, res: Response): Promise<void> {
-=======
-export async function deleteJob(req: Request, res: Response) {
->>>>>>> main
   try {
     const jobId = req.params.id as string;
     const userId = req.user?.id;
     const userRole = req.user?.role;
-<<<<<<< HEAD
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
 
     const existing = await prisma.job.findUnique({ where: { id: jobId } });
     if (!existing) {
@@ -196,22 +161,8 @@ export async function deleteJob(req: Request, res: Response) {
     }
 
     if (userRole !== "ADMIN" && existing.employerId !== userId) {
-      res.status(403).json({ success: false, message: "Unauthorized" });
+      res.status(403).json({ success: false, message: "Not authorized to delete this job" });
       return;
-=======
-
-    if (!userId) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
-    const existing = await prisma.job.findUnique({ where: { id: jobId } });
-    if (!existing) return res.status(404).json({ error: "Job not found" });
-
-    if (userRole !== "ADMIN" && existing.employerId !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to delete this job" });
->>>>>>> main
     }
 
     await prisma.job.delete({ where: { id: jobId } });

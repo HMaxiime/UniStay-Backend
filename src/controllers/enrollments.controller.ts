@@ -5,13 +5,8 @@ import { createEnrollmentSchema } from "../validators/learning.validator.js";
 export async function createEnrollment(req: Request, res: Response) {
   try {
     const data = createEnrollmentSchema.parse(req.body);
-<<<<<<< HEAD
-    const userId = req.user?.id ?? data.userId;
+    const userId = req.user?.id;
     if (!userId) return res.status(400).json({ error: "userId is required" });
-=======
-    const userId = req.userId;
-    if (!userId) return res.status(401).json({ error: "Authentication required" });
->>>>>>> main
 
     const enrollment = await prisma.enrollment.create({
       data: { userId, courseId: data.courseId },
