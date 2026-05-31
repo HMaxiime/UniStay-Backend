@@ -35,6 +35,9 @@ const configuredOrigins = (
 const allowedOrigins = Array.from(
   new Set([
     ...configuredOrigins,
+    // Vite serves on both hostnames — the browser may use either
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
     `http://localhost:${PORT}`,
     `http://127.0.0.1:${PORT}`,
   ])
