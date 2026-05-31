@@ -65,27 +65,15 @@ export const updateProfileHandler = async (req: AuthRequest, res: Response) => {
 
 export const changePasswordHandler = async (req: Request, res: Response) => {
   try {
-<<<<<<< HEAD
-    // Accept both spellings — frontend sends currentPassword, service expects oldPassword
-    const { oldPassword, currentPassword, newPassword } = req.body
-    const resolvedOldPassword = oldPassword ?? currentPassword
-    if (!resolvedOldPassword || !newPassword) {
-      return res.status(400).json({ message: 'currentPassword and newPassword are required' })
-=======
     if (!req.userId) return res.status(401).json({ message: 'Authentication required' })
     const { oldPassword, newPassword } = req.body
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ message: 'oldPassword and newPassword are required' })
->>>>>>> main
     }
     if (newPassword.length < 6) {
       return res.status(400).json({ message: 'New password must be at least 6 characters' })
     }
-<<<<<<< HEAD
-    const result = await changePassword(req.user!.id, { oldPassword: resolvedOldPassword, newPassword })
-=======
     const result = await changePassword(req.userId, { oldPassword, newPassword })
->>>>>>> main
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
@@ -122,15 +110,3 @@ export const resetPasswordHandler = async (req: Request, res: Response) => {
   }
 }
 
-<<<<<<< HEAD
-export const getUserByIdHandler = async (req: Request, res: Response) => {
-  try {
-    const id = req.params['id'] as string
-    const user = await getUserById(id)
-    return res.status(200).json({ user })
-  } catch (error: any) {
-    return res.status(404).json({ message: error.message })
-  }
-}
-=======
->>>>>>> main

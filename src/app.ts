@@ -22,86 +22,48 @@ const app = express();
 
 const PORT = process.env["PORT"] || 3000;
 
-<<<<<<< HEAD
-// Build the allowed origins list from env or sensible local defaults.
-=======
->>>>>>> main
 const configuredOrigins = (
   process.env["CORS_ORIGINS"] ||
   process.env["FRONTEND_URL"] ||
   "http://localhost:5173"
 )
   .split(",")
-<<<<<<< HEAD
-  .map((o) => o.trim())
-=======
   .map((origin) => origin.trim())
->>>>>>> main
   .filter(Boolean);
 
 const allowedOrigins = Array.from(
   new Set([
     ...configuredOrigins,
-<<<<<<< HEAD
-    // Vite serves on both hostnames — the browser may use either
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    `http://localhost:${PORT}`,
-    `http://127.0.0.1:${PORT}`,
-  ])
-=======
     `http://localhost:${PORT}`,
     `http://127.0.0.1:${PORT}`,
   ]),
->>>>>>> main
 );
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
-<<<<<<< HEAD
-    // Allow server-to-server calls (no origin) and any listed origin.
-    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error(`CORS blocked: ${origin}`));
-=======
     if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
     callback(new Error(`CORS blocked origin: ${origin}`));
->>>>>>> main
   },
   credentials: true,
 };
 
-<<<<<<< HEAD
-// CORS must be before all routes so preflight OPTIONS requests are handled.
-app.use(cors(corsOptions));
-app.use(express.json());
-
-// Catch malformed JSON bodies before they reach route handlers.
-=======
 // CORS must be registered before any routes so that preflight (OPTIONS)
 // requests and the Access-Control-Allow-Origin header are handled correctly.
 app.use(cors(corsOptions));
 
 app.use(express.json());
 
->>>>>>> main
 const jsonErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   if (error instanceof SyntaxError && "body" in error) {
     return res.status(400).json({ error: "Invalid JSON body" });
   }
-<<<<<<< HEAD
-  next(error);
-};
-=======
 
   next(error);
 };
 
->>>>>>> main
 app.use(jsonErrorHandler);
 
 app.use("/api/auth", authRoutes);
