@@ -194,7 +194,16 @@ const options: swaggerJsdoc.Options = {
 const swaggerSpec = swaggerJsdoc(options);
 
 export function setupSwagger(app: Express) {
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      // Point the favicon to the bundled asset already served under /api-docs/
+      // so the browser doesn't 404 on GET /favicon-32x32.png at the root.
+      customfavIcon: "/api-docs/favicon-32x32.png",
+      customSiteTitle: "UniStay+ API Docs",
+    }),
+  );
   app.get("/api-docs.json", (_req, res) => {
     res.json(swaggerSpec);
   });

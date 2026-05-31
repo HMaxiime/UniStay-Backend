@@ -37,6 +37,10 @@ export const login = async (req: Request, res: Response) => {
     const result = await loginUser({ email, password })
     return res.status(200).json({ message: 'Login successful', ...result })
   } catch (error: any) {
+    // Log unexpected errors (DB issues, etc.) server-side so they appear in Render logs
+    if (error.message !== 'Invalid email or password') {
+      console.error('[auth] Login error:', error)
+    }
     return res.status(400).json({ message: error.message })
   }
 }
