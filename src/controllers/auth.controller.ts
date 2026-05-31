@@ -99,14 +99,15 @@ export const forgotPasswordHandler = async (req: Request, res: Response) => {
 
 export const resetPasswordHandler = async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body
-    if (!token || !newPassword) {
+    const { token, newPassword, password } = req.body
+    const resolvedPassword = newPassword ?? password
+    if (!token || !resolvedPassword) {
       return res.status(400).json({ message: 'token and newPassword are required' })
     }
-    if (newPassword.length < 6) {
+    if (resolvedPassword.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' })
     }
-    const result = await resetPassword(token, newPassword)
+    const result = await resetPassword(token, resolvedPassword)
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
