@@ -1,85 +1,21 @@
-import { Router } from "express";
+import express, { type RequestHandler } from "express";
 import {
-  getAllBookings,
-  getMyBookings,
-  getBookingById,
   createBooking,
-  uploadPaymentProof,
-  confirmBooking,
-  rejectBooking,
-  cancelBooking,
-  completeBooking,
-  getBookingsByListing,
+  deleteBooking,
+  getAllBookings,
+  getBookingById,
+  updateBooking,
+  changeBookingStatus,
 } from "../controllers/booking.controller.js";
-import {
-  authenticate,
-  requireAdmin,
-  authorize,
-} from "../middleware/auth.middleware.js";
+import { authenticate, requireStudent, requireHost } from "../middleware/auth.middleware.js";
 
-const router = Router();
+const router = express.Router();
 
-router.use(authenticate);
-
-router.get(
-  "/",
-  requireAdmin,
-  getAllBookings
-);
-
-router.get(
-  "/my",
-  authorize(["STUDENT"]),
-  getMyBookings
-); 
-
-router.post(
-  "/",
-  authorize(["STUDENT"]),
-  createBooking
-); 
-
-router.patch(
-  "/:id/payment-proof",
-  authorize(["STUDENT"]),
-  uploadPaymentProof
-); 
-
-router.patch(
-  "/:id/cancel",
-  authorize(["STUDENT", "ADMIN"]),
-  cancelBooking
-);
-
-router.patch(
-  "/:id/confirm",
-  authorize(["HOST", "ADMIN"]),
-  confirmBooking
-);
-
-router.patch(
-  "/:id/reject",
-  authorize(["HOST", "ADMIN"]),
-  rejectBooking
-);
-
-router.patch(
-  "/:id/complete",
-  authorize(["HOST", "ADMIN"]),
-  completeBooking
-); 
-
-router.get(
-  "/listing/:housing_id",
-  authorize(["HOST", "ADMIN"]),
-  getBookingsByListing
-); // GET  /bookings/listing/:housing_id
-
-
-router.get(
-  "/:id",
-  authorize(["STUDENT", "HOST", "ADMIN"]),
-  getBookingById
-); 
+router.get("/", authenticate as RequestHandler  , getAllBookings);
+router.get("/:id", authenticate as RequestHandler , requireStudent as RequestHandler , getBookingById);
+router.post("/",authenticate as RequestHandler , requireStudent as RequestHandler , createBooking);
+router.delete("/:id", authenticate as RequestHandler , requireStudent as RequestHandler , deleteBooking);
+router.put("/approve/:id", authenticate as RequestHandler  , requireHost as RequestHandler , changeBookingStatus);
+router.put("/:id", authenticate as RequestHandler , requireStudent as RequestHandler , updateBooking);
 
 export default router;

@@ -104,6 +104,10 @@ model Housing {
   id                 String             @id @default(uuid())
   title              String
   location           String
+  description  String?
+  bedrooms     Int?
+  amenities    String[]  @default([])
+  images       String[]  @default([])
   price              Float
   availability       Boolean            @default(true)
   verificationStatus VerificationStatus @default(PENDING)
@@ -121,8 +125,6 @@ model Booking {
   housingId String
   status    BookingStatus @default(PENDING)
   paymentStatus  PaymentStatus @default(UNPAID)
-  paymentProof   String?     
-  paymentRef     String?     
   totalAmount    Float? 
   checkIn   DateTime
   checkOut  DateTime
@@ -181,10 +183,10 @@ model Skill {
   category String
   level    SkillLevel
 
-  userSkills  UserSkill[]
-  jobSkills   JobSkill[]
-  materials   MaterialSkill[]
-  assignments Assignment[]
+  userSkills        UserSkill[]
+  jobSkills         JobSkill[]
+  courses           CourseSkill[]
+  certificateSkills CertificateSkill[]
 }
 
 model UserSkill {
@@ -227,6 +229,8 @@ model Course {
   updatedAt   DateTime @updatedAt
 
   materials    Material[]
+  skills       CourseSkill[]
+  assignments  Assignment[]
   enrollments  Enrollment[]
   certificates Certificate[]
 }
@@ -262,8 +266,6 @@ model Material {
 
   course      Course?         @relation(fields: [courseId], references: [id], onDelete: Cascade)
   files       MaterialFile[]
-  skills      MaterialSkill[]
-  assignments Assignment[]
 }
 
 model MaterialFile {
@@ -279,15 +281,15 @@ model MaterialFile {
   material     Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
 }
 
-model MaterialSkill {
+model CourseSkill {
   id         String @id @default(uuid())
-  materialId String
+  courseId   String
   skillId    String
 
-  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  skill    Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  skill  Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
-  @@unique([materialId, skillId])
+  @@unique([courseId, skillId])
 }
 
 //////////////////////////////////////////////////////
@@ -297,17 +299,14 @@ model MaterialSkill {
 model Assignment {
   id            String   @id @default(uuid())
   title         String
-  materialId    String
-  skillId       String
+  courseId      String
   isStandalone  Boolean  @default(false)
   timeLimit     Int?
-  questionCount Int
   passingScore  Int      @default(70)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  material  Material           @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  skill     Skill              @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  course    Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions Question[]
   results   AssignmentResult[]
 }
@@ -321,6 +320,7 @@ model Question {
   assignment Assignment      @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   options    Option[]
   answers    StudentAnswer[]
+  assignmentResults AssignmentResultQuestion[]
 }
 
 model Option {
@@ -349,6 +349,18 @@ model AssignmentResult {
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignment Assignment      @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   answers    StudentAnswer[]
+  questions  AssignmentResultQuestion[]
+}
+
+model AssignmentResultQuestion {
+  id                 String @id @default(uuid())
+  assignmentResultId String
+  questionId         String
+
+  assignmentResult AssignmentResult @relation(fields: [assignmentResultId], references: [id], onDelete: Cascade)
+  question         Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentResultId, questionId])
 }
 
 model StudentAnswer {
@@ -373,8 +385,20 @@ model Certificate {
   certificateUrl String?
   issuedAt       DateTime @default(now())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  skills CertificateSkill[]
 
   @@unique([userId, courseId])
+}
+
+model CertificateSkill {
+  id            String @id @default(uuid())
+  certificateId String
+  skillId       String
+
+  certificate Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  skill       Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([certificateId, skillId])
 }

@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type RequestHandler } from "express";
 import {
   createMaterial,
   deleteMaterial,
@@ -7,12 +7,16 @@ import {
   updateMaterial,
 } from "../controllers/materials.controller.js";
 
+import { authenticate } from "../middleware/auth.middleware.js";
+
 
 const router = express.Router();
-router.post("/", createMaterial);
+const auth = authenticate as RequestHandler;
+
+router.post("/course/:courseId", auth, createMaterial);
 router.get("/", getMaterials);
 router.get("/:id", getMaterialById);
-router.put("/:id", updateMaterial);
-router.delete("/:id", deleteMaterial);
+router.put("/:id", auth, updateMaterial);
+router.delete("/:id", auth, deleteMaterial);
 
 export default router;
