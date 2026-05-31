@@ -73,6 +73,37 @@ const options: swaggerJsdoc.Options = {
             password: { type: "string", format: "password", example: "password123" },
           },
         },
+        UpdateProfileInput: {
+  type: "object",
+  properties: {
+    fullName: { type: "string", example: "Ruth Nzikwikiza" },
+    phone: { type: "string", example: "+250780000000" },
+    location: { type: "string", example: "Kigali" },
+  },
+},
+ChangePasswordInput: {
+  type: "object",
+  required: ["oldPassword", "newPassword"],
+  properties: {
+    oldPassword: { type: "string", format: "password", example: "password123" },
+    newPassword: { type: "string", format: "password", example: "newpassword123" },
+  },
+},
+ForgotPasswordInput: {
+  type: "object",
+  required: ["email"],
+  properties: {
+    email: { type: "string", format: "email", example: "ruth@example.com" },
+  },
+},
+ResetPasswordInput: {
+  type: "object",
+  required: ["token", "newPassword"],
+  properties: {
+    token: { type: "string", example: "e401b6e54d5e004e..." },
+    newPassword: { type: "string", format: "password", example: "newpassword123" },
+  },
+},
         RoleUpdateInput: {
           type: "object",
           required: ["role"],
