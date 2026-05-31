@@ -2,10 +2,16 @@ import "dotenv/config";
 import app from "./app.js";
 import { connectDB } from "./config/prisma.js";
 import { createServer } from "node:http";
+import { setupSwagger } from "./config/swagger.js";
+import morgan from "morgan";
 
 
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
+
+app.use(process.env["NODE_ENV"] === "production" ? morgan("combined") : morgan("dev"));
+
+setupSwagger(app);
 
 async function startServer() {
   try {

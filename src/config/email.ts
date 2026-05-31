@@ -1,5 +1,11 @@
 import nodemailer from 'nodemailer'
 
+const isEmailConfigured = Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD)
+
+if (!isEmailConfigured) {
+  console.warn('[email] GMAIL_USER / GMAIL_APP_PASSWORD are not set — emails will be skipped.')
+}
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -30,5 +36,22 @@ export const sendResetEmail = async (toEmail: string, resetToken: string) => {
         <p style="color: #666;">If you didn't request this, ignore this email.</p>
       </div>
     `,
+  })
+}
+
+export const sendEmail = async (to: string, subject: string, content: { subject?: string; html?: string } | string) => {
+  const html = typeof content === 'string' ? content : content.html || ''
+  const mailSubject = typeof content === 'string' ? subject : content.subject || subject
+
+  if (!isEmailConfigured) {
+    console.warn(`[email] Skipping email to ${to} ("${mailSubject}") — SMTP credentials not configured.`)
+    return
+  }
+
+  await transporter.sendMail({
+    from: `"UniStay+" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: mailSubject,
+    html,
   })
 }

@@ -1,14 +1,15 @@
-import express from "express";
+import express, { type RequestHandler } from "express";
 import {
   createOption,
   deleteOption,
   updateOption,
 } from "../controllers/options.controller.js";
+import { authenticate } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
-
-router.post("/", createOption);
-router.put("/:id", updateOption);
-router.delete("/:id", deleteOption);
+const auth = authenticate as RequestHandler;
+router.post("/",createOption);
+router.put("/:id", auth, updateOption);
+router.delete("/:id", auth, deleteOption);
 
 export default router;
