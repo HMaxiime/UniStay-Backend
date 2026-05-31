@@ -61,14 +61,26 @@ export const updateProfileHandler = async (req: Request, res: Response) => {
 
 export const changePasswordHandler = async (req: Request, res: Response) => {
   try {
+<<<<<<< Updated upstream
     const { oldPassword, newPassword } = req.body
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ message: 'oldPassword and newPassword are required' })
+=======
+    // Accept both spellings — frontend sends currentPassword, service expects oldPassword
+    const { oldPassword, currentPassword, newPassword } = req.body
+    const resolvedOldPassword = oldPassword ?? currentPassword
+    if (!resolvedOldPassword || !newPassword) {
+      return res.status(400).json({ message: 'currentPassword and newPassword are required' })
+>>>>>>> Stashed changes
     }
     if (newPassword.length < 6) {
       return res.status(400).json({ message: 'New password must be at least 6 characters' })
     }
+<<<<<<< Updated upstream
     const result = await changePassword(req.user!.id, { oldPassword, newPassword })
+=======
+    const result = await changePassword(req.user!.id, { oldPassword: resolvedOldPassword, newPassword })
+>>>>>>> Stashed changes
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
@@ -90,14 +102,15 @@ export const forgotPasswordHandler = async (req: Request, res: Response) => {
 
 export const resetPasswordHandler = async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body
-    if (!token || !newPassword) {
+    const { token, newPassword, password } = req.body
+    const resolvedPassword = newPassword ?? password
+    if (!token || !resolvedPassword) {
       return res.status(400).json({ message: 'token and newPassword are required' })
     }
-    if (newPassword.length < 6) {
+    if (resolvedPassword.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' })
     }
-    const result = await resetPassword(token, newPassword)
+    const result = await resetPassword(token, resolvedPassword)
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })
@@ -112,4 +125,8 @@ export const getUserByIdHandler = async (req: Request, res: Response) => {
   } catch (error: any) {
     return res.status(404).json({ message: error.message })
   }
+<<<<<<< Updated upstream
 }
+=======
+}
+>>>>>>> Stashed changes
