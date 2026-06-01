@@ -20,7 +20,7 @@ import uploadsRoutes from "./routes/uploads.routes.js";
 
 const app = express();
 
-const PORT = process.env["PORT"] || 3000;
+const PORT = 5000;
 
 const configuredOrigins = (
   process.env["CORS_ORIGINS"] ||
