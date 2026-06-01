@@ -30,14 +30,15 @@ const configuredOrigins = (
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-
 const allowedOrigins = Array.from(
   new Set([
     ...configuredOrigins,
     `http://localhost:${PORT}`,
     `http://127.0.0.1:${PORT}`,
+    "https://cdn-unistay.onrender.com",
   ]),
 );
+
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
