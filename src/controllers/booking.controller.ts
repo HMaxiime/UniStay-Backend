@@ -158,28 +158,34 @@ export const changeBookingStatus = async (
 
     const updatedBooking = await prisma.booking.update({ where: { id }, data: { status } })
 
+    // Lock/unlock listing availability based on status change
+    if (status === 'CONFIRMED') {
+      await prisma.housing.update({ where: { id: existingBooking.housingId }, data: { availability: false } });
+    }
+    if (status === 'CANCELLED') {
+      await prisma.housing.update({ where: { id: existingBooking.housingId }, data: { availability: true } });
+    }
+
     const Bookingdeatails = await prisma.booking.findUnique({ where: { id }, select: { id: true, checkIn: true, checkOut: true, userId: true, housing: { select: { id: true, title: true, hostId: true } }, user: { select: { email: true, fullName: true } } } })
 
     if (updatedBooking.status === 'CONFIRMED') {
       const emailContent = bookingConfirmationEmail(Bookingdeatails?.user.fullName || '', Bookingdeatails?.housing.title || '', Bookingdeatails?.checkIn?.toDateString() || '', Bookingdeatails?.checkOut?.toDateString() || '')
-      // Notification email is best-effort: never fail the status update if it can't be sent.
       try {
         await sendEmail(Bookingdeatails?.user.email || '', 'Booking Confirmed!', emailContent)
       } catch (mailError) {
         console.error('Failed to send booking confirmation email:', mailError)
       }
-      if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CONFIRMED', title: 'Booking confirmed', message: `Your booking for ${Bookingdeatails.housing.title} was confirmed`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
+      if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CONFIRMED', title: 'Booking confirmed', message: `Your booking for ${Bookingdeatails.housing.title} was confirmed. You may now submit payment.`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
     }
 
     if (updatedBooking.status === 'CANCELLED') {
       const emailContent = bookingCancellationEmail(Bookingdeatails?.user.fullName || '', Bookingdeatails?.housing.title || '', Bookingdeatails?.checkIn?.toDateString() || '', Bookingdeatails?.checkOut?.toDateString() || '', `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/housings`)
-      // Notification email is best-effort: never fail the status update if it can't be sent.
       try {
         await sendEmail(Bookingdeatails?.user.email || '', 'Booking Cancelled!', emailContent)
       } catch (mailError) {
         console.error('Failed to send booking cancellation email:', mailError)
       }
-      if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CANCELLED', title: 'Booking cancelled', message: `Your booking for ${Bookingdeatails.housing.title} was cancelled`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
+      if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CANCELLED', title: 'Booking cancelled', message: `Your booking for ${Bookingdeatails.housing.title} was cancelled.`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
     }
 
     res.status(200).json({ message: 'Booking status updated successfully', updatedBooking })
@@ -350,6 +356,136 @@ export const getBookingsByListing = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: bookings });
   } catch (error) {
     console.error("getBookingsByListing error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ─── GET STUDENT'S OWN BOOKINGS ───────────────────────────────────────────────
+export const getMyBookings = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const bookings = await prisma.booking.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        housing: {
+          select: { id: true, title: true, location: true, images: true, price: true, hostId: true },
+        },
+      },
+    });
+
+    return res.status(200).json({ success: true, data: bookings });
+  } catch (error) {
+    console.error("getMyBookings error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ─── CONFIRM BOOKING (Host / Admin) ──────────────────────────────────────────
+// Locks the listing (availability = false) and notifies the student to pay.
+export const confirmBooking = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const booking = await prisma.booking.findUnique({ where: { id }, include: { housing: true, user: { select: { fullName: true, email: true } } } });
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.status !== "PENDING") return res.status(400).json({ success: false, message: `Cannot confirm a booking with status: ${booking.status}` });
+    if (userRole !== "ADMIN" && booking.housing.hostId !== userId) return res.status(403).json({ success: false, message: "Only the host can confirm this booking" });
+
+    const [updated] = await prisma.$transaction([
+      prisma.booking.update({ where: { id }, data: { status: "CONFIRMED" } }),
+      prisma.housing.update({ where: { id: booking.housingId }, data: { availability: false } }),
+    ]);
+
+    // Notify student
+    await createNotification({ userId: booking.userId, type: "BOOKING_CONFIRMED", title: "Booking confirmed!", message: `Your booking for ${booking.housing.title} was confirmed. Please submit your payment proof.`, data: { bookingId: id, housingId: booking.housingId } });
+    try {
+      const email = bookingConfirmationEmail(booking.user?.fullName || "", booking.housing.title, booking.checkIn?.toDateString() || "", booking.checkOut?.toDateString() || "");
+      await sendEmail(booking.user?.email || "", "Booking Confirmed!", email);
+    } catch { /* best-effort */ }
+
+    return res.status(200).json({ success: true, message: "Booking confirmed. Listing is now marked as booked.", data: updated });
+  } catch (error) {
+    console.error("confirmBooking error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ─── REJECT BOOKING (Host / Admin) ───────────────────────────────────────────
+export const rejectBooking = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const booking = await prisma.booking.findUnique({ where: { id }, include: { housing: true, user: { select: { fullName: true, email: true } } } });
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.status !== "PENDING") return res.status(400).json({ success: false, message: `Cannot reject a booking with status: ${booking.status}` });
+    if (userRole !== "ADMIN" && booking.housing.hostId !== userId) return res.status(403).json({ success: false, message: "Only the host can reject this booking" });
+
+    const updated = await prisma.booking.update({ where: { id }, data: { status: "CANCELLED" } });
+
+    await createNotification({ userId: booking.userId, type: "BOOKING_CANCELLED", title: "Booking rejected", message: `Your booking request for ${booking.housing.title} was not accepted.`, data: { bookingId: id, housingId: booking.housingId } });
+    try {
+      const email = bookingCancellationEmail(booking.user?.fullName || "", booking.housing.title, booking.checkIn?.toDateString() || "", booking.checkOut?.toDateString() || "", `${process.env.FRONTEND_URL ?? "http://localhost:5173"}/housing`);
+      await sendEmail(booking.user?.email || "", "Booking Rejected", email);
+    } catch { /* best-effort */ }
+
+    return res.status(200).json({ success: true, message: "Booking rejected.", data: updated });
+  } catch (error) {
+    console.error("rejectBooking error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ─── SUBMIT PAYMENT PROOF (Student) ──────────────────────────────────────────
+// Student submits a payment reference/proof URL after host confirmation.
+export const uploadPaymentProof = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const booking = await prisma.booking.findUnique({ where: { id }, include: { housing: true } });
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.userId !== userId) return res.status(403).json({ success: false, message: "Forbidden" });
+    if (booking.status !== "CONFIRMED") return res.status(400).json({ success: false, message: "Payment can only be submitted after host confirmation." });
+
+    const { paymentProof, paymentRef } = req.body as { paymentProof?: string; paymentRef?: string };
+    const proof = paymentProof ?? paymentRef;
+    if (!proof) return res.status(400).json({ success: false, message: "paymentProof or paymentRef is required" });
+
+    // Mark booking as COMPLETED and payment as PAID immediately — no manual host verification needed.
+    // Also restore listing availability so it can be booked again after the stay.
+    const [updated] = await prisma.$transaction([
+      prisma.booking.update({
+        where: { id },
+        data: { status: "COMPLETED", paymentStatus: "PAID" },
+      }),
+      prisma.housing.update({
+        where: { id: booking.housingId },
+        data: { availability: true },
+      }),
+    ]);
+
+    // Notify host that payment was received
+    await createNotification({
+      userId: booking.housing.hostId,
+      type: "PAYMENT_SUBMITTED",
+      title: "Payment received",
+      message: `Payment for ${booking.housing.title} was completed by the student. Booking is now confirmed.`,
+      data: { bookingId: id, housingId: booking.housingId },
+    });
+
+    return res.status(200).json({ success: true, message: "Payment completed. Booking is confirmed.", data: updated });
+  } catch (error) {
+    console.error("uploadPaymentProof error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
