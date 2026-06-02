@@ -86,6 +86,12 @@ export async function uploadMaterialToCloudinary(
   return uploadBufferToCloudinary(file.buffer, "unistay/materials", file.originalname);
 }
 
+export async function uploadCourseThumbnailToCloudinary(
+  file: Express.Multer.File
+): Promise<CloudinaryUploadResult> {
+  return uploadBufferToCloudinary(file.buffer, "unistay/course-thumbnails", file.originalname);
+}
+
 export async function deleteFromCloudinary(
   publicId: string,
   resourceType: "image" | "video" | "raw" = "image"
@@ -109,6 +115,33 @@ export function extractCloudinaryPublicId(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function uploadAvatarToCloudinary(
+  file: Express.Multer.File,
+  userId: string
+): Promise<CloudinaryUploadResult> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "unistay/avatars",
+        public_id: userId,
+        resource_type: "image",
+        overwrite: true,
+        invalidate: true,
+      },
+      (error, result) => {
+        if (error || !result) {
+          reject(error ?? new Error("Cloudinary avatar upload failed"));
+          return;
+        }
+
+        resolve(toUploadResult(result));
+      }
+    );
+
+    stream.end(file.buffer);
+  });
 }
 
 export default cloudinary;
