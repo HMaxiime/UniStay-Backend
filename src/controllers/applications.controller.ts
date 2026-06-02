@@ -132,7 +132,7 @@ export async function getJobApplications(req: Request, res: Response) {
             email: true,
             phone: true,
             location: true,
-            profilePicture: true,
+            avatar: true,
           },
         },
       },

@@ -77,7 +77,7 @@ export const updateProfile = async (
       email: true,
       phone: true,
       location: true,
-      profilePicture: true,
+      avatar: true,
       role: true,
     },
   })
@@ -165,7 +165,7 @@ export const getUserById = async (userId: string) => {
       email: true,
       phone: true,
       location: true,
-      profilePicture: true,
+      avatar: true,
       role: true,
       createdAt: true,
     },
