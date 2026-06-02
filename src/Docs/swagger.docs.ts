@@ -1161,3 +1161,134 @@
  *       200:
  *         description: User active status updated
  */
+
+/**
+ * @swagger
+ * /api/uploads/avatar:
+ *   post:
+ *     summary: Upload user avatar
+ *     description: Upload a new avatar image for the authenticated user. Replaces any existing avatar.
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Avatar image file (JPEG, PNG, or WebP)
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar uploaded successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       format: uri
+ *       400:
+ *         description: Invalid request (missing file or invalid format)
+ *       401:
+ *         description: Unauthorized
+ *   put:
+ *     summary: Update user avatar
+ *     description: Replace the authenticated user's avatar with a new image. Automatically removes the old image from storage.
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: New avatar image file (JPEG, PNG, or WebP)
+ *     responses:
+ *       200:
+ *         description: Avatar updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar updated successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       format: uri
+ *       400:
+ *         description: Invalid request (missing file or invalid format)
+ *       401:
+ *         description: Unauthorized
+ *   delete:
+ *     summary: Delete user avatar
+ *     description: Remove the authenticated user's avatar completely
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Avatar deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar deleted successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       nullable: true
+ *       404:
+ *         description: User has no avatar to delete
+ *       401:
+ *         description: Unauthorized
+ */
