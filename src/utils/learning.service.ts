@@ -26,7 +26,7 @@ export async function startAssignment(userId: string, assignmentId: string) {
 
   const selectedQuestions = shuffle(assignment.questions).slice(0, EXAM_QUESTION_LIMIT);
 
-  return prisma.assignmentResult.create({
+  const result = await prisma.assignmentResult.create({
     data: {
       userId,
       assignmentId,
@@ -43,6 +43,16 @@ export async function startAssignment(userId: string, assignmentId: string) {
       questions: { include: { question: { include: { options: true } } } },
     },
   });
+  return {
+    ...result,
+    questions: result.questions.map(({ question, ...item }) => ({
+      ...item,
+      question: {
+        ...question,
+        options: question.options.map(({ isCorrect: _isCorrect, ...option }) => option),
+      },
+    })),
+  };
 }
 
 export async function submitAssignment(
