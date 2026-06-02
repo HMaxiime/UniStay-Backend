@@ -10,7 +10,7 @@ import {
   getUserById,
 } from '../utils/auth.service.js'
 
-const ALLOWED_ROLES = ['STUDENT', 'HOST', 'EMPLOYER']
+const ALLOWED_ROLES = ['STUDENT', 'HOST', 'EMPLOYER', 'INSTRUCTOR']
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -19,7 +19,7 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'fullName, email, password and role are required' })
     }
     if (!ALLOWED_ROLES.includes(role)) {
-      return res.status(400).json({ message: 'Role must be STUDENT, HOST, or EMPLOYER' })
+      return res.status(400).json({ message: 'Role must be STUDENT, HOST, EMPLOYER, or INSTRUCTOR' })
     }
     const user = await registerUser({ fullName, email, password, phone, location, role })
     return res.status(201).json({ message: 'User registered successfully', user })

@@ -62,7 +62,7 @@ const options: swaggerJsdoc.Options = {
             password: { type: "string", format: "password", example: "Student@123" },
             phone: { type: "string", example: "+250780000000" },
             location: { type: "string", example: "Kigali" },
-            role: { type: "string", enum: ["STUDENT", "HOST", "EMPLOYER"], example: "STUDENT" },
+            role: { type: "string", enum: ["STUDENT", "HOST", "EMPLOYER", "INSTRUCTOR"], example: "STUDENT" },
           },
         },
         LoginRequest: {

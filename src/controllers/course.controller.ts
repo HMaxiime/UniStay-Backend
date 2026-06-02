@@ -4,14 +4,16 @@ import { createCourseSchema, updateCourseSchema } from "../validators/course.val
 import { ZodError } from "zod";
 
 const courseInclude = {
-  materials: true,
+  materials: { include: { files: true } },
   skills: { include: { skill: true } },
   assignments: true,
 };
 
 export async function getCourses(req: Request, res: Response) {
   try {
-    const courses = await prisma.course.findMany({ include: courseInclude });
+    const courses = req.user?.role === "INSTRUCTOR"
+      ? await prisma.course.findMany({ where: { uploadedBy: req.user.id }, include: courseInclude })
+      : await prisma.course.findMany({ where: { isPublished: true }, include: courseInclude });
     res.json(courses);
   } catch (error) {
     console.error("Error fetching courses:", error);
@@ -27,6 +29,9 @@ export async function getCourseById(req: Request, res: Response) {
       include: courseInclude,
     });
     if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+    if (!course.isPublished && req.user?.role !== "INSTRUCTOR") {
       return res.status(404).json({ error: "Course not found" });
     }
     res.json(course);
@@ -123,6 +128,9 @@ export async function updateCourse(req: Request, res: Response) {
     if (!existingCourse) {
       return res.status(404).json({ error: "Course not found" });
     }
+    if (existingCourse.uploadedBy !== req.userId) {
+      return res.status(403).json({ error: "You can only update your own courses" });
+    }
 
     if (skillIds !== undefined) {
       const uniqueSkillIds = [...new Set(skillIds)];
@@ -179,6 +187,9 @@ export async function updateCourse(req: Request, res: Response) {
 export async function deleteCourse(req: Request, res: Response) {
   try {
     const courseId = req.params.id as string;
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    if (course.uploadedBy !== req.userId) return res.status(403).json({ error: "You can only delete your own courses" });
     await prisma.course.delete({ where: { id: courseId } });
     res.status(204).send();
   } catch (error) {
@@ -190,6 +201,9 @@ export async function deleteCourse(req: Request, res: Response) {
 export async function publishCourse(req: Request, res: Response) {
   try {
     const courseId = req.params.id as string;
+    const existing = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!existing) return res.status(404).json({ error: "Course not found" });
+    if (existing.uploadedBy !== req.userId) return res.status(403).json({ error: "You can only publish your own courses" });
     const course = await prisma.course.update({
       where: { id: courseId },
       data: { isPublished: true },

@@ -6,15 +6,15 @@ import {
   getAssignments,
   updateAssignment,
 } from "../controllers/assignments.controller.js";
-import { authenticate ,requireAdmin } from "../middleware/auth.middleware.js";
+import { authenticate, optionalAuthenticate, requireInstructor } from "../middleware/auth.middleware.js";
 
 
 const router = express.Router();
 
-router.post("/",authenticate,requireAdmin, createAssignment);
-router.get("/", getAssignments);
-router.get("/:id", getAssignmentById);
-router.put("/:id", authenticate, requireAdmin, updateAssignment);
-router.delete("/:id", authenticate, requireAdmin, deleteAssignment);
+router.post("/", authenticate, requireInstructor, createAssignment);
+router.get("/", optionalAuthenticate, getAssignments);
+router.get("/:id", optionalAuthenticate, getAssignmentById);
+router.put("/:id", authenticate, requireInstructor, updateAssignment);
+router.delete("/:id", authenticate, requireInstructor, deleteAssignment);
 
 export default router;

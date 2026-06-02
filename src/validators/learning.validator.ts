@@ -40,5 +40,5 @@ export const submitAssignmentSchema = z.object({
       questionId: z.string().uuid("questionId must be valid"),
       selectedOptionId: z.string().uuid("selectedOptionId must be valid"),
     })
-  ).min(1, "At least one answer is required"),
+  ),
 });
