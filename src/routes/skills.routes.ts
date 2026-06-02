@@ -6,13 +6,14 @@ import {
   getSkills,
   updateSkill,
 } from "../controllers/skills.controller.js";
+import { authenticate, requireInstructor } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 router.get("/", getSkills);
 router.get("/:id", getSkillById);
-router.post("/", createSkill);
-router.put("/:id", updateSkill);
-router.delete("/:id", deleteSkill);
+router.post("/", authenticate, requireInstructor, createSkill);
+router.put("/:id", authenticate, requireInstructor, updateSkill);
+router.delete("/:id", authenticate, requireInstructor, deleteSkill);
 
 export default router;

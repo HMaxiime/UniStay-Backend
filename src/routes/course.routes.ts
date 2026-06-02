@@ -7,15 +7,15 @@ import {
   publishCourse,
   updateCourse,
 } from "../controllers/course.controller.js";
-import {authenticate, requireAdmin ,} from "../middleware/auth.middleware.js";
+import { authenticate, optionalAuthenticate, requireInstructor } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/", authenticate, requireAdmin, createCourse);
-router.get("/", getCourses);
-router.get("/:id",getCourseById);
-router.put("/:id", authenticate, requireAdmin, updateCourse);
-router.delete("/:id", authenticate, requireAdmin, deleteCourse);
-router.put("/:id/publish", authenticate, requireAdmin, publishCourse);
+router.post("/", authenticate, requireInstructor, createCourse);
+router.get("/", optionalAuthenticate, getCourses);
+router.get("/:id", optionalAuthenticate, getCourseById);
+router.put("/:id", authenticate, requireInstructor, updateCourse);
+router.delete("/:id", authenticate, requireInstructor, deleteCourse);
+router.put("/:id/publish", authenticate, requireInstructor, publishCourse);
 
 export default router;

@@ -20,6 +20,9 @@ function withVideoFiles<T extends { files: Array<{ resourceType: string; mimeTyp
 export async function getMaterials(req: Request, res: Response) {
     try {
         const materials = await prisma.material.findMany({
+            where: req.user?.role === "INSTRUCTOR"
+                ? { uploadedBy: req.user.id }
+                : { course: { isPublished: true } },
             include: materialInclude,
         });
         res.json(materials);
@@ -39,6 +42,12 @@ export async function getMaterialById(req: Request, res: Response) {
         if (!material) {
             return res.status(404).json({ error: "Material not found" });
         }
+        if (req.user?.role !== "INSTRUCTOR" && !material.course?.isPublished) {
+            return res.status(404).json({ error: "Material not found" });
+        }
+        if (req.user?.role === "INSTRUCTOR" && material.uploadedBy !== req.user.id) {
+            return res.status(404).json({ error: "Material not found" });
+        }
         res.json(withVideoFiles(material));
     } catch (error) {
         console.error("Error fetching material:", error);
@@ -56,6 +65,9 @@ export async function createMaterial(req: Request, res: Response) {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
         if (!course) {
             return res.status(404).json({ error: "Course not found" });
+        }
+        if (course.uploadedBy !== req.userId) {
+            return res.status(403).json({ error: "You can only add materials to your own courses" });
         }
 
         const parsed = createMaterialSchema.parse(req.body);
@@ -98,6 +110,9 @@ export async function createMaterial(req: Request, res: Response) {
 export async function deleteMaterial(req: Request, res: Response) {
     try {
         const materialId = req.params.id as string;
+        const material = await prisma.material.findUnique({ where: { id: materialId } });
+        if (!material) return res.status(404).json({ error: "Material not found" });
+        if (material.uploadedBy !== req.userId) return res.status(403).json({ error: "You can only delete your own materials" });
         await prisma.material.delete({ where: { id: materialId } });
         res.status(204).send();
     } catch (error) {
@@ -114,6 +129,9 @@ export async function updateMaterial(req: Request, res: Response) {
         const existingMaterial = await prisma.material.findUnique({ where: { id: materialId } });
         if (!existingMaterial) {
             return res.status(404).json({ error: "Material not found" });
+        }
+        if (existingMaterial.uploadedBy !== req.userId) {
+            return res.status(403).json({ error: "You can only update your own materials" });
         }
 
         const updateData: {
@@ -152,4 +170,3 @@ export async function updateMaterial(req: Request, res: Response) {
         res.status(500).json({ error: "Failed to update material" });
     }
 }
-

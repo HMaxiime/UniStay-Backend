@@ -93,6 +93,13 @@ export function requireEmployer(req: Request, res: Response, next: NextFunction)
   next();
 }
 
+export function requireInstructor(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "INSTRUCTOR") {
+    return res.status(403).json({ error: "Only instructors can perform this action" });
+  }
+  next();
+}
+
 // ─── requireAdmin ─────────────────────────────────────────────────────────────
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (req.user?.role !== "ADMIN") {
