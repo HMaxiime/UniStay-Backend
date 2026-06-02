@@ -147,11 +147,13 @@ export async function uploadAvatar(req: Request, res: Response) {
     const user = await prisma.user.update({
       where: { id: req.userId },
       data: { Avatar: uploaded.url },
+      data: { avatar: uploaded.url },
       select: {
         id: true,
         fullName: true,
         email: true,
         Avatar: true,
+        avatar: true,
       },
     });
 

@@ -1033,6 +1033,26 @@
  *     responses:
  *       201:
  *         description: File uploaded
+ * /api/uploads/avatar:
+ *   post:
+ *     summary: Upload or replace the authenticated user's avatar
+ *     tags: [Uploads]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded and user avatar updated
  * /api/uploads/{id}:
  *   get:
  *     summary: Get uploaded file by ID
