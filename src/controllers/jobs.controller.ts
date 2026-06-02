@@ -89,7 +89,7 @@ export async function createJob(req: Request, res: Response): Promise<void> {
       data: {
         title: parsed.title,
         location: parsed.location,
-        salary: parsed.salary,
+        ...(parsed.salary !== undefined && { salary: parsed.salary }),
         scheduleType: parsed.scheduleType,
         employerId: userId,
       },
@@ -131,7 +131,7 @@ export async function updateJob(req: Request, res: Response): Promise<void> {
       data: {
         title: parsed.title,
         location: parsed.location,
-        salary: parsed.salary,
+        ...(parsed.salary !== undefined && { salary: parsed.salary }),
         scheduleType: parsed.scheduleType,
       },
     });
