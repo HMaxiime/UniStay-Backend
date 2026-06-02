@@ -20,12 +20,12 @@ import uploadsRoutes from "./routes/uploads.routes.js";
 
 const app = express();
 
-const PORT = process.env["PORT"] || 3000;
+const PORT = 5173;
 
 const configuredOrigins = (
   process.env["CORS_ORIGINS"] ||
   process.env["FRONTEND_URL"] ||
-  "http://localhost:5000"
+  "http://localhost:5173"
 )
   .split(",")
   .map((origin) => origin.trim())

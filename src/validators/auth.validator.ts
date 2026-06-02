@@ -6,8 +6,8 @@ export const registerSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   phone: z.string().optional(),
   location: z.string().optional(),
-  role: z.enum(['STUDENT', 'HOST', 'EMPLOYER'] as const, {
-    error: 'Role must be STUDENT, HOST, or EMPLOYER',
+  role: z.enum(['STUDENT', 'HOST', 'EMPLOYER', 'INSTRUCTOR'] as const, {
+    error: 'Role must be STUDENT, HOST, EMPLOYER, or INSTRUCTOR',
   }),
 })
 

@@ -4,12 +4,12 @@ import {
   deleteOption,
   updateOption,
 } from "../controllers/options.controller.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+import { authenticate, requireInstructor } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 const auth = authenticate as RequestHandler;
-router.post("/",createOption);
-router.put("/:id", auth, updateOption);
-router.delete("/:id", auth, deleteOption);
+router.post("/", auth, requireInstructor, createOption);
+router.put("/:id", auth, requireInstructor, updateOption);
+router.delete("/:id", auth, requireInstructor, deleteOption);
 
 export default router;

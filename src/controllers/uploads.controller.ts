@@ -25,6 +25,9 @@ export async function uploadFile(req: Request, res: Response) {
     if (!material) {
       return res.status(404).json({ error: "Material not found" });
     }
+    if (material.uploadedBy !== req.userId) {
+      return res.status(403).json({ error: "You can only upload files to your own materials" });
+    }
 
     const uploaded = await uploadMaterialToCloudinary(req.file);
     const file = await prisma.materialFile.create({
@@ -69,6 +72,10 @@ export async function getUploadById(req: Request, res: Response) {
     if (!file) {
       return res.status(404).json({ error: "Uploaded file not found" });
     }
+    const material = await prisma.material.findUnique({ where: { id: file.materialId } });
+    if (!material || material.uploadedBy !== req.userId) {
+      return res.status(403).json({ error: "You can only delete files from your own materials" });
+    }
 
     return res.json(file);
   } catch (error) {
@@ -85,6 +92,10 @@ export async function deleteUpload(req: Request, res: Response) {
 
     if (!file) {
       return res.status(404).json({ error: "Uploaded file not found" });
+    }
+    const material = await prisma.material.findUnique({ where: { id: file.materialId } });
+    if (!material || material.uploadedBy !== req.userId) {
+      return res.status(403).json({ error: "You can only delete files from your own materials" });
     }
 
     await deleteFromCloudinary(file.publicId, toCloudinaryResourceType(file.resourceType));
