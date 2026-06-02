@@ -9,7 +9,7 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: "UniStay+ Backend API",
       version: "1.0.0",
-      description: "REST API for UniStay+ authentication, users, housing, jobs, learning, and uploads.",
+      description: "REST API for UniStay+ authentication, users, hostels, rooms, jobs, learning, refunds, and uploads.",
     },
     servers: [
       {
@@ -33,8 +33,11 @@ const options: swaggerJsdoc.Options = {
       { name: "Learning" },
       { name: "Jobs" },
       { name: "Job Applications" },
-      { name: "Listings" },
-      { name: "Bookings" },
+      { name: "Hostels" },
+      { name: "Rooms" },
+      { name: "Hostel Bookings" },
+      { name: "Refunds" },
+      { name: "Stripe" },
       { name: "Uploads" },
     ],
     components: {
@@ -152,37 +155,54 @@ const options: swaggerJsdoc.Options = {
             status: { type: "string", enum: ["PENDING", "ACCEPTED", "REJECTED"] },
           },
         },
-        ListingInput: {
+        HostelInput: {
           type: "object",
-          required: ["title", "location", "price"],
+          required: ["name", "location"],
           properties: {
-            title: { type: "string" },
-            description: { type: "string" },
+            name: { type: "string" },
             location: { type: "string" },
+            description: { type: "string" },
+            images: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+        },
+        RoomInput: {
+          type: "object",
+          required: ["hostelId", "name", "category", "capacity", "price"],
+          properties: {
+            hostelId: { type: "string" },
+            name: { type: "string" },
+            category: { type: "string", enum: ["VIP", "STANDARD", "BUDGET"] },
+            capacity: { type: "number" },
             price: { type: "number" },
-            bedrooms: { type: "number" },
+            description: { type: "string" },
             amenities: { type: "array", items: { type: "string" } },
-            availability: { type: "boolean" },
           },
         },
         BookingInput: {
           type: "object",
-          required: ["housingId", "checkIn", "checkOut"],
+          required: ["roomId", "checkIn", "checkOut"],
           properties: {
-            housingId: { type: "string" },
+            roomId: { type: "string" },
             checkIn: { type: "string", format: "date-time" },
             checkOut: { type: "string", format: "date-time" },
           },
         },
-        PaymentProofInput: {
+        RefundRequestInput: {
           type: "object",
-          required: ["paymentProof"],
+          required: ["bookingId"],
           properties: {
-            paymentProof: {
-              type: "string",
-              format: "uri",
-              example: "https://example.com/payment-proof.jpg",
-            },
+            bookingId: { type: "string" },
+            reason: { type: "string" },
+          },
+        },
+        StatusInput: {
+          type: "object",
+          required: ["status"],
+          properties: {
+            status: { type: "string" },
           },
         },
       },
