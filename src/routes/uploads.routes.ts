@@ -1,9 +1,11 @@
 import express from "express";
-import upload from "../config/multer.js";
+import upload, { avatarUpload } from "../config/multer.js";
 import {
   deleteUpload,
   getUploadById,
   getUploads,
+  uploadAvatar,
+  uploadCourseThumbnail,
   uploadFile,
 } from "../controllers/uploads.controller.js";
 import { authenticate, requireInstructor } from "../middleware/auth.middleware.js";
@@ -11,6 +13,8 @@ import { authenticate, requireInstructor } from "../middleware/auth.middleware.j
 const router = express.Router();
 
 router.post("/", authenticate, requireInstructor, upload.single("file"), uploadFile);
+router.post("/course-thumbnail", authenticate, requireInstructor, upload.single("file"), uploadCourseThumbnail);
+router.post("/avatar", authenticate, avatarUpload.single("file"), uploadAvatar);
 router.get("/", getUploads);
 router.get("/:id", getUploadById);
 router.delete("/:id", authenticate, requireInstructor, deleteUpload);
