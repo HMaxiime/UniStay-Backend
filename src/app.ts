@@ -8,8 +8,11 @@ import materialsRoute from "./routes/materials.routes.js";
 import usersRoutes from "./routes/users.routes.js";
 import jobsRoutes from "./routes/jobs.routes.js";
 import applicationsRoutes from "./routes/applications.routes.js";
-import housingRoutes from "./routes/housing.routes.js";
-import bookingRoutes from "./routes/booking.routes.js";
+import hostelRoutes from "./routes/hostels.routes.js";
+import roomRoutes from "./routes/rooms.routes.js";
+import hostelBookingRoutes from "./routes/hostel-bookings.routes.js";
+import refundRoutes from "./routes/refunds.routes.js";
+import adminSettingsRoutes from "./routes/admin-settings.routes.js";
 import assignmentsRoutes from "./routes/assignments.routes.js";
 import questionsRoutes from "./routes/questions.routes.js";
 import optionsRoutes from "./routes/options.routes.js";
@@ -17,6 +20,7 @@ import enrollmentsRoutes from "./routes/enrollments.routes.js";
 import assignmentResultsRoutes from "./routes/assignment-results.routes.js";
 import studentAnswersRoutes from "./routes/student-answers.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
+import stripeRoutes from "./routes/stripe.routes.js";
 
 const app = express();
 
@@ -57,6 +61,7 @@ const corsOptions: CorsOptions = {
 // requests and the Access-Control-Allow-Origin header are handled correctly.
 app.use(cors(corsOptions));
 
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 
 const jsonErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
@@ -76,8 +81,11 @@ app.use("/api/materials", materialsRoute);
 app.use("/api/users", usersRoutes);
 app.use("/api/jobs", jobsRoutes);
 app.use("/api/applications", applicationsRoutes);
-app.use("/api/listings", housingRoutes);
-app.use("/api/bookings", bookingRoutes);
+app.use("/api/hostels", hostelRoutes);
+app.use("/api/rooms", roomRoutes);
+app.use("/api/hostel-bookings", hostelBookingRoutes);
+app.use("/api/refunds", refundRoutes);
+app.use("/api/admin-settings", adminSettingsRoutes);
 app.use("/api/assignments", assignmentsRoutes);
 app.use("/api/questions", questionsRoutes);
 app.use("/api/options", optionsRoutes);
@@ -85,6 +93,7 @@ app.use("/api/enrollments", enrollmentsRoutes);
 app.use("/api/assignment-results", assignmentResultsRoutes);
 app.use("/api/student-answers", studentAnswersRoutes);
 app.use("/api/uploads", uploadsRoutes);
+app.use("/api/stripe", stripeRoutes);
 
 app.get("/", (_req, res) => {
   res.json({ message: "UniStay+ API is running" });

@@ -23,7 +23,7 @@ export const getAllBookings = async (req: Request, res: Response) => {
         take: limit,
         include: {
           user: { select: { fullName: true, email: true } },
-          housing: { select: { title: true, location: true, images: true } },
+          room: { include: { hostel: { select: { id: true, name: true, location: true } } } },
         },
       }),
       prisma.booking.count(),
@@ -52,7 +52,7 @@ export const getBookingById = async (req: Request, res: Response) => {
       where: { id },
       include: {
         user: true,
-        housing: { select: { id: true, title: true, images: true, hostId: true } },
+        room: { include: { hostel: { select: { id: true, name: true, location: true, hostId: true } } } },
       },
     });
     if (!booking) {
@@ -68,22 +68,25 @@ export const getBookingById = async (req: Request, res: Response) => {
 // POST new booking
 export const createBooking = async (req: Request, res: Response) => {
   try {
-    const { housingId, checkIn, checkOut } = req.body as { housingId: string; checkIn: string; checkOut: string }
+    const { roomId, checkIn, checkOut } = req.body as { roomId: string; checkIn: string; checkOut: string }
 
-    if (!housingId || !checkIn || !checkOut) return res.status(400).json({ message: 'housingId, checkIn and checkOut are required' })
+    if (!roomId || !checkIn || !checkOut) return res.status(400).json({ message: 'roomId, checkIn and checkOut are required' })
     const userId = req.user?.id
     if (!userId) return res.status(401).json({ message: 'Unauthorized' })
 
-    const housing = await prisma.housing.findUnique({ where: { id: housingId }, select: { id: true, title: true, price: true, hostId: true } })
-    if (!housing) return res.status(404).json({ message: 'Housing not found' })
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      select: { id: true, name: true, price: true, hostel: { select: { id: true, name: true, hostId: true } } },
+    })
+    if (!room) return res.status(404).json({ message: 'Room not found' })
 
     const days = Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)))
-    const totalAmount = (housing.price ?? 0) * days
+    const totalAmount = (room.price ?? 0) * days
 
     const newBooking = await prisma.$transaction(async (tx) => {
       const conflict = await tx.booking.findFirst({
         where: {
-          housingId,
+          roomId,
           status: 'CONFIRMED',
           checkIn: { lt: new Date(checkOut) },
           checkOut: { gt: new Date(checkIn) },
@@ -92,10 +95,10 @@ export const createBooking = async (req: Request, res: Response) => {
 
       if (conflict) throw new Error('BOOKING_CONFLICT')
 
-      return tx.booking.create({ data: { housingId, userId, checkIn: new Date(checkIn), checkOut: new Date(checkOut), totalAmount, status: 'PENDING' } })
+      return tx.booking.create({ data: { roomId, userId, checkIn: new Date(checkIn), checkOut: new Date(checkOut), totalAmount, status: 'PENDING' } })
     })
 
-    await createNotification({ userId: housing.hostId, type: 'BOOKING_CREATED', title: 'New booking request', message: `A student requested to book ${housing.title}`, data: { bookingId: newBooking.id, housingId, userId } })
+    await createNotification({ userId: room.hostel.hostId, type: 'BOOKING_CREATED', title: 'New booking request', message: `A student requested to book room ${room.name}`, data: { bookingId: newBooking.id, roomId, userId } })
 
     res.status(201).json(newBooking)
   } catch (error) {
@@ -119,9 +122,9 @@ export const deleteBooking = async (req: Request, res: Response) => {
     if (booking.status === 'CANCELLED') return res.status(400).json({ message: 'Booking is already cancelled' })
 
     if (booking.userId === userId) {
-      const deletedBooking = await prisma.booking.update({ where: { id }, data: { status: 'CANCELLED' }, include: { housing: { select: { id: true, title: true, hostId: true } } } })
+      const deletedBooking = await prisma.booking.update({ where: { id }, data: { status: 'CANCELLED' }, include: { room: { include: { hostel: { select: { id: true, name: true, hostId: true } } } } } })
 
-      await createNotification({ userId: deletedBooking.housing.hostId, type: 'BOOKING_CANCELLED', title: 'Booking cancelled', message: `A student cancelled their booking for ${deletedBooking.housing.title}`, data: { bookingId: deletedBooking.id, housingId: deletedBooking.housing.id, userId: deletedBooking.userId } })
+      await createNotification({ userId: deletedBooking.room.hostel.hostId, type: 'BOOKING_CANCELLED', title: 'Booking cancelled', message: `A student cancelled their booking for ${deletedBooking.room.name}`, data: { bookingId: deletedBooking.id, roomId: deletedBooking.room.id, userId: deletedBooking.userId } })
 
       return res.status(200).json({ message: 'Booking cancelled successfully' })
     }
@@ -140,7 +143,7 @@ export const changeBookingStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const id = req.params["id"] as string;
+    const id = req.params.id as string;
     const { status } = req.body;
     
     if (!status) {
@@ -158,28 +161,63 @@ export const changeBookingStatus = async (
 
     const updatedBooking = await prisma.booking.update({ where: { id }, data: { status } })
 
-    const Bookingdeatails = await prisma.booking.findUnique({ where: { id }, select: { id: true, checkIn: true, checkOut: true, userId: true, housing: { select: { id: true, title: true, hostId: true } }, user: { select: { email: true, fullName: true } } } })
+    const bookingDetails = await prisma.booking.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        checkIn: true,
+        checkOut: true,
+        userId: true,
+        room: { select: { id: true, name: true, hostel: { select: { id: true, name: true } } } },
+        user: { select: { email: true, fullName: true } },
+      },
+    })
 
     if (updatedBooking.status === 'CONFIRMED') {
-      const emailContent = bookingConfirmationEmail(Bookingdeatails?.user.fullName || '', Bookingdeatails?.housing.title || '', Bookingdeatails?.checkIn?.toDateString() || '', Bookingdeatails?.checkOut?.toDateString() || '')
-      // Notification email is best-effort: never fail the status update if it can't be sent.
+      const emailContent = bookingConfirmationEmail(
+        bookingDetails?.user.fullName || '',
+        bookingDetails?.room.name || '',
+        bookingDetails?.checkIn?.toDateString() || '',
+        bookingDetails?.checkOut?.toDateString() || '',
+      )
       try {
-        await sendEmail(Bookingdeatails?.user.email || '', 'Booking Confirmed!', emailContent)
+        await sendEmail(bookingDetails?.user.email || '', 'Booking Confirmed!', emailContent)
       } catch (mailError) {
         console.error('Failed to send booking confirmation email:', mailError)
       }
-      if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CONFIRMED', title: 'Booking confirmed', message: `Your booking for ${Bookingdeatails.housing.title} was confirmed`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
+      if (bookingDetails) {
+        await createNotification({
+          userId: bookingDetails.userId,
+          type: 'BOOKING_CONFIRMED',
+          title: 'Booking confirmed',
+          message: `Your booking for ${bookingDetails.room.name} was confirmed`,
+          data: { bookingId: bookingDetails.id, roomId: bookingDetails.room.id },
+        })
+      }
     }
 
     if (updatedBooking.status === 'CANCELLED') {
-      const emailContent = bookingCancellationEmail(Bookingdeatails?.user.fullName || '', Bookingdeatails?.housing.title || '', Bookingdeatails?.checkIn?.toDateString() || '', Bookingdeatails?.checkOut?.toDateString() || '', `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/housings`)
-      // Notification email is best-effort: never fail the status update if it can't be sent.
+      const emailContent = bookingCancellationEmail(
+        bookingDetails?.user.fullName || '',
+        bookingDetails?.room.name || '',
+        bookingDetails?.checkIn?.toDateString() || '',
+        bookingDetails?.checkOut?.toDateString() || '',
+        `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/rooms`,
+      )
       try {
-        await sendEmail(Bookingdeatails?.user.email || '', 'Booking Cancelled!', emailContent)
+        await sendEmail(bookingDetails?.user.email || '', 'Booking Cancelled!', emailContent)
       } catch (mailError) {
         console.error('Failed to send booking cancellation email:', mailError)
       }
-      if (Bookingdeatails) await createNotification({ userId: Bookingdeatails.userId, type: 'BOOKING_CANCELLED', title: 'Booking cancelled', message: `Your booking for ${Bookingdeatails.housing.title} was cancelled`, data: { bookingId: Bookingdeatails.id, housingId: Bookingdeatails.housing.id } })
+      if (bookingDetails) {
+        await createNotification({
+          userId: bookingDetails.userId,
+          type: 'BOOKING_CANCELLED',
+          title: 'Booking cancelled',
+          message: `Your booking for ${bookingDetails.room.name} was cancelled`,
+          data: { bookingId: bookingDetails.id, roomId: bookingDetails.room.id },
+        })
+      }
     }
 
     res.status(200).json({ message: 'Booking status updated successfully', updatedBooking })
@@ -191,9 +229,9 @@ export const changeBookingStatus = async (
 // PUT update booking
 export const updateBooking = async (req: Request, res: Response) => {
   const id = req.params['id'] as string
-  const { checkIn, userId, totalAmount, housingId, status } = req.body
+  const { checkIn, userId, totalAmount, roomId, status } = req.body
   try {
-    const updatedBooking = await prisma.booking.update({ where: { id }, data: { checkIn, userId, totalAmount, housingId, status } })
+    const updatedBooking = await prisma.booking.update({ where: { id }, data: { checkIn, userId, totalAmount, roomId, status } })
     res.status(200).json({ message: 'Updating booking successfully', updatedBooking })
   } catch (error) {
     console.error('Error updating booking:', error)
