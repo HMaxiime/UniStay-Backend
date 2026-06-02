@@ -80,7 +80,7 @@ model User {
   password         String
   role             Role      @default(STUDENT)
   location         String?
-  profilePicture   String?
+  Avatar           String?
   isActive         Boolean   @default(true)
   resetToken       String?
   resetTokenExpiry DateTime?
