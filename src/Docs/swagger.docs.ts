@@ -1052,7 +1052,7 @@
  *                 format: binary
  *     responses:
  *       200:
- *         description: Avatar uploaded and profile picture updated
+ *         description: Avatar uploaded and user avatar updated
  * /api/uploads/{id}:
  *   get:
  *     summary: Get uploaded file by ID
