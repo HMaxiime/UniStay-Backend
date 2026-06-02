@@ -24,6 +24,7 @@ const options: swaggerJsdoc.Options = {
     tags: [
       { name: "Auth" },
       { name: "Users" },
+      { name: "Avatar" },
       { name: "Skills" },
       { name: "Courses" },
       { name: "Materials" },
