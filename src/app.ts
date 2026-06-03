@@ -20,6 +20,7 @@ import enrollmentsRoutes from "./routes/enrollments.routes.js";
 import assignmentResultsRoutes from "./routes/assignment-results.routes.js";
 import studentAnswersRoutes from "./routes/student-answers.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
+import avatarRoutes from "./routes/avatar.routes.js";
 import stripeRoutes from "./routes/stripe.routes.js";
 
 const app = express();
@@ -40,8 +41,7 @@ const allowedOrigins = Array.from(
     `http://localhost:${PORT}`,
     `http://127.0.0.1:${PORT}`,
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://cdn-unistay.onrender.com",
+    "http://127.0.0.1:3000"
   ]),
 );
 
@@ -93,6 +93,7 @@ app.use("/api/enrollments", enrollmentsRoutes);
 app.use("/api/assignment-results", assignmentResultsRoutes);
 app.use("/api/student-answers", studentAnswersRoutes);
 app.use("/api/uploads", uploadsRoutes);
+app.use("/api/avatar", avatarRoutes);
 app.use("/api/stripe", stripeRoutes);
 
 app.get("/", (_req, res) => {

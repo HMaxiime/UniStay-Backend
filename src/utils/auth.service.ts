@@ -45,7 +45,7 @@ export const registerUser = async (data: {
     console.error('[auth] Failed to send welcome email:', mailError)
   }
 
-  return { id: user.id, email: user.email, role: user.role }
+  return { id: user.id, email: user.email, role: user.role, avatar: user.avatar }
 }
 
 export const loginUser = async (data: { email: string; password: string }) => {
@@ -61,7 +61,7 @@ export const loginUser = async (data: { email: string; password: string }) => {
     { expiresIn: '7d' }
   )
 
-  return { token, user: { id: user.id, email: user.email, role: user.role } }
+  return { token, user: { id: user.id, email: user.email, role: user.role, avatar: user.avatar } }
 }
 
 export const updateProfile = async (
@@ -77,7 +77,6 @@ export const updateProfile = async (
       email: true,
       phone: true,
       location: true,
-      Avatar: true,
       avatar: true,
       role: true,
     },
@@ -174,3 +173,4 @@ export const getUserById = async (userId: string) => {
   if (!user) throw new Error('User not found')
   return user
 }
+
