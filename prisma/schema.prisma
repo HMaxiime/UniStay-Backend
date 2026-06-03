@@ -48,6 +48,7 @@ enum BookingStatus {
   CONFIRMED
   WAITLISTED
   REJECTED
+  COMPLETED
   CANCELLED
 }
 enum PaymentStatus {
