@@ -75,8 +75,8 @@ export const stripeWebhook = async (req: Request, res: Response) => {
           receiptUrl = charge?.receipt_url ?? null;
         }
 
-        await prisma.$transaction(async (tx) => {
-          const booking = await tx.booking.findUnique({
+        await prisma.$transaction(async () => {
+          const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
             include: { user: { select: { email: true, fullName: true } } },
           });
@@ -88,7 +88,7 @@ export const stripeWebhook = async (req: Request, res: Response) => {
             return;
           }
 
-          const room = await tx.room.findUnique({ where: { id: booking.roomId } });
+          const room = await prisma.room.findUnique({ where: { id: booking.roomId } });
           if (!room) {
             throw new Error("ROOM_NOT_FOUND");
           }
@@ -97,13 +97,13 @@ export const stripeWebhook = async (req: Request, res: Response) => {
           let queuePosition: number | null = null;
 
           if (room.availableBeds > 0) {
-            await tx.room.update({
+            await prisma.room.update({
               where: { id: room.id },
               data: { availableBeds: { decrement: 1 } },
             });
           } else {
             newStatus = "WAITLISTED";
-            const waitlistCount = await tx.booking.count({
+            const waitlistCount = await prisma.booking.count({
               where: {
                 roomId: room.id,
                 status: "WAITLISTED",
@@ -112,7 +112,7 @@ export const stripeWebhook = async (req: Request, res: Response) => {
             queuePosition = waitlistCount + 1;
           }
 
-          await tx.booking.update({
+          await prisma.booking.update({
             where: { id: bookingId },
             data: {
               status: newStatus,

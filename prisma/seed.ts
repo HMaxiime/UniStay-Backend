@@ -172,8 +172,6 @@ async function main() {
     });
   }
 
-  // 2. Add waitlisted bookings on standardRoom (since beds = 0)
-  // Let's create an additional student who will be waitlisted
   const student5 = await prisma.user.create({
     data: {
       fullName: "Evan Waitlist",
