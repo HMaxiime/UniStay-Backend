@@ -683,6 +683,12 @@
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ListingVerificationInput'
  *     responses:
  *       200:
  *         description: Hostel verification updated
@@ -1439,63 +1445,19 @@
  *     responses:
  *       200:
  *         description: Avatar updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Avatar updated successfully
- *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                       format: uuid
- *                     fullName:
- *                       type: string
- *                     email:
- *                       type: string
- *                     Avatar:
- *                       type: string
- *                       format: uri
  *       400:
  *         description: Invalid request (missing file or invalid format)
  *       401:
  *         description: Unauthorized
  *   delete:
  *     summary: Delete user avatar
- *     description: Remove the authenticated user's avatar completely
+ *     description: Remove the authenticated user's avatar image.
  *     tags: [Avatar]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Avatar deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Avatar deleted successfully
- *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                       format: uuid
- *                     fullName:
- *                       type: string
- *                     email:
- *                       type: string
- *                     Avatar:
- *                       type: string
- *                       nullable: true
- *       404:
- *         description: User has no avatar to delete
  *       401:
  *         description: Unauthorized
  */

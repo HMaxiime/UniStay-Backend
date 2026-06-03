@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import prisma from "../config/prisma.js";
-import { createJobSchema } from "../validators/jobs.validator.js";
+import { createJobSchema, updateJobSchema } from "../validators/jobs.validator.js";
 
 export async function getJobs(req: Request, res: Response) {
   try {
@@ -89,7 +89,7 @@ export async function createJob(req: Request, res: Response): Promise<void> {
       data: {
         title: parsed.title,
         location: parsed.location,
-        salary: parsed.salary,
+        salary: parsed.salary ?? 0,
         scheduleType: parsed.scheduleType,
         employerId: userId,
       },
@@ -124,15 +124,15 @@ export async function updateJob(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const parsed = createJobSchema.parse(req.body);
+    const parsed = updateJobSchema.parse(req.body);
 
     const job = await prisma.job.update({
       where: { id: jobId },
       data: {
-        title: parsed.title,
-        location: parsed.location,
-        salary: parsed.salary,
-        scheduleType: parsed.scheduleType,
+        ...(parsed.title !== undefined && { title: parsed.title }),
+        ...(parsed.location !== undefined && { location: parsed.location }),
+        ...(parsed.salary !== undefined && { salary: parsed.salary }),
+        ...(parsed.scheduleType !== undefined && { scheduleType: parsed.scheduleType }),
       },
     });
 

@@ -3,10 +3,14 @@ import { z } from 'zod'
 export const createJobSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   location: z.string().min(2, 'Location is required'),
-  salary: z.number().positive('Salary must be a positive number'),
+  salary: z.number().positive('Salary must be a positive number').optional(),
   scheduleType: z.enum(['FULL_TIME', 'PART_TIME', 'INTERNSHIP'] as const, {
     error: 'Schedule type must be FULL_TIME, PART_TIME, or INTERNSHIP',
   }),
 })
 
 export type CreateJobInput = z.infer<typeof createJobSchema>
+
+export const updateJobSchema = createJobSchema.partial()
+
+export type UpdateJobInput = z.infer<typeof updateJobSchema>
