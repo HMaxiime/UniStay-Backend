@@ -10,3 +10,7 @@ export const createJobSchema = z.object({
 })
 
 export type CreateJobInput = z.infer<typeof createJobSchema>
+
+export const updateJobSchema = createJobSchema.partial()
+
+export type UpdateJobInput = z.infer<typeof updateJobSchema>
