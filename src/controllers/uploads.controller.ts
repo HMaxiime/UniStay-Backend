@@ -146,13 +146,11 @@ export async function uploadAvatar(req: Request, res: Response) {
     const uploaded = await uploadAvatarToCloudinary(req.file, req.userId);
     const user = await prisma.user.update({
       where: { id: req.userId },
-      data: { Avatar: uploaded.url },
       data: { avatar: uploaded.url },
       select: {
         id: true,
         fullName: true,
         email: true,
-        Avatar: true,
         avatar: true,
       },
     });
@@ -181,11 +179,11 @@ export async function updateAvatar(req: Request, res: Response) {
 
     const currentUser = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { Avatar: true } as any,
-    }) as any;
+      select: { avatar: true },
+    });
 
-    if (currentUser?.Avatar) {
-      const publicId = extractCloudinaryPublicId(currentUser.Avatar);
+    if (currentUser?.avatar) {
+      const publicId = extractCloudinaryPublicId(currentUser.avatar);
       if (publicId) {
         try {
           await deleteFromCloudinary(publicId, "image");
@@ -198,12 +196,12 @@ export async function updateAvatar(req: Request, res: Response) {
     const uploaded = await uploadAvatarToCloudinary(req.file, req.userId);
     const user = await prisma.user.update({
       where: { id: req.userId },
-      data: { Avatar: uploaded.url },
+      data: { avatar: uploaded.url },
       select: {
         id: true,
         fullName: true,
         email: true,
-        Avatar: true,
+        avatar: true,
       },
     });
 
@@ -225,14 +223,14 @@ export async function deleteAvatar(req: Request, res: Response) {
 
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { Avatar: true } as any,
-    }) as any;
+      select: { avatar: true },
+    });
 
-    if (!user?.Avatar) {
+    if (!user?.avatar) {
       return res.status(404).json({ error: "User has no avatar to delete" });
     }
 
-    const publicId = extractCloudinaryPublicId(user.Avatar);
+    const publicId = extractCloudinaryPublicId(user.avatar);
     if (publicId) {
       try {
         await deleteFromCloudinary(publicId, "image");
@@ -243,12 +241,12 @@ export async function deleteAvatar(req: Request, res: Response) {
 
     const updatedUser = await prisma.user.update({
       where: { id: req.userId },
-      data: { Avatar: null },
+      data: { avatar: null },
       select: {
         id: true,
         fullName: true,
         email: true,
-        Avatar: true,
+        avatar: true,
       },
     });
 
