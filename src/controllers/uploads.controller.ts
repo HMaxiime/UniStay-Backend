@@ -151,6 +151,7 @@ export async function uploadAvatar(req: Request, res: Response) {
         id: true,
         fullName: true,
         email: true,
+        role: true,
         avatar: true,
       },
     });
@@ -201,6 +202,7 @@ export async function updateAvatar(req: Request, res: Response) {
         id: true,
         fullName: true,
         email: true,
+        role: true,
         avatar: true,
       },
     });
@@ -246,6 +248,7 @@ export async function deleteAvatar(req: Request, res: Response) {
         id: true,
         fullName: true,
         email: true,
+        role: true,
         avatar: true,
       },
     });

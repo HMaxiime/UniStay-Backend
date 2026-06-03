@@ -24,7 +24,10 @@ export async function getMyLearningProfile(req: Request, res: Response) {
     if (!req.userId) return res.status(401).json({ error: "Authentication required" });
     const profile = await getUserLearningProfile(req.userId);
     if (!profile) return res.status(404).json({ error: "User not found" });
-    res.json(profile);
+    res.json({
+      ...profile,
+      avatar: profile.Avatar
+    });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch learning profile" });
   }
