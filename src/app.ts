@@ -20,11 +20,8 @@ import enrollmentsRoutes from "./routes/enrollments.routes.js";
 import assignmentResultsRoutes from "./routes/assignment-results.routes.js";
 import studentAnswersRoutes from "./routes/student-answers.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
-<<<<<<< HEAD
 import avatarRoutes from "./routes/avatar.routes.js";
-=======
 import stripeRoutes from "./routes/stripe.routes.js";
->>>>>>> ee202afdf34a0eedc5b91a0eff86c5f7739d7e39
 
 const app = express();
 
@@ -96,11 +93,8 @@ app.use("/api/enrollments", enrollmentsRoutes);
 app.use("/api/assignment-results", assignmentResultsRoutes);
 app.use("/api/student-answers", studentAnswersRoutes);
 app.use("/api/uploads", uploadsRoutes);
-<<<<<<< HEAD
 app.use("/api/avatar", avatarRoutes);
-=======
 app.use("/api/stripe", stripeRoutes);
->>>>>>> ee202afdf34a0eedc5b91a0eff86c5f7739d7e39
 
 app.get("/", (_req, res) => {
   res.json({ message: "UniStay+ API is running" });

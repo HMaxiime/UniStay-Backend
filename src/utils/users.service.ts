@@ -17,10 +17,7 @@ export const getAllUsers = async (adminId: string) => {
     },
   }) as any[]
 
-  return users.map((user) => ({
-    ...user,
-    avatar: user.Avatar
-  }))
+  return users
 }
 export const getUserById = async (userId: string) => {
   const user = await prisma.user.findUnique({
@@ -37,10 +34,7 @@ export const getUserById = async (userId: string) => {
     },
   })
   if (!user) throw new Error('User not found')
-  return {
-    ...user,
-    avatar: user.Avatar
-  }
+  return user
 }
 
 export const updateUserRole = async (userId: string, role: Role) => {
