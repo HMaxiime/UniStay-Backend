@@ -78,6 +78,7 @@ export const updateProfile = async (
       phone: true,
       location: true,
       Avatar: true,
+      avatar: true,
       role: true,
     },
   })
@@ -168,14 +169,19 @@ export const getUserById = async (userId: string) => {
       email: true,
       phone: true,
       location: true,
-      Avatar: true,
+      avatar: true,
       role: true,
       createdAt: true,
     },
   })
   if (!user) throw new Error('User not found')
+<<<<<<< HEAD
   return {
     ...user,
     avatar: user.Avatar
   }
 }
+=======
+  return user
+}
+>>>>>>> ee202afdf34a0eedc5b91a0eff86c5f7739d7e39

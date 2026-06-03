@@ -6,14 +6,6 @@ const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
-router.get(
-  "/me",
-  authenticate as RequestHandler,
-  getMe as unknown as RequestHandler,
-);
-
-router.post('/register', register)
-router.post('/login', login)
 router.get('/me', authenticate as RequestHandler, getMe)
 router.put('/me', authenticate as RequestHandler, updateProfileHandler)
 router.post("/change-password", authenticate as RequestHandler, changePasswordHandler)

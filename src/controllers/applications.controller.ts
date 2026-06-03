@@ -133,6 +133,7 @@ export async function getJobApplications(req: Request, res: Response) {
             phone: true,
             location: true,
             Avatar: true,
+            avatar: true,
           },
         },
       },
