@@ -252,7 +252,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
 
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { housing: true },
+      include: { room: { include: { hostel: true } } },
     });
 
     if (!booking) {
@@ -279,11 +279,10 @@ export const cancelBooking = async (req: Request, res: Response) => {
       data: { status: "CANCELLED" },
     });
 
-    // Restore listing availability only if it was confirmed (i.e., listing was locked)
     if (wasConfirmed) {
-      await prisma.housing.update({
-        where: { id: booking.housingId },
-        data: { availability: true },
+      await prisma.room.update({
+        where: { id: booking.roomId },
+        data: { availableBeds: { increment: 1 } },
       });
     }
 
@@ -312,14 +311,14 @@ export const completeBooking = async (req: Request, res: Response) => {
 
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { housing: true },
+      include: { room: { include: { hostel: true } } },
     });
 
     if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-    const isHost  = booking.housing.hostId === userId;
+    const isHost  = booking.room.hostel.hostId === userId;
     const isAdmin = userRole === "ADMIN";
 
     if (!isHost && !isAdmin) {
@@ -337,9 +336,9 @@ export const completeBooking = async (req: Request, res: Response) => {
         where: { id },
         data: { status: "COMPLETED" },
       }),
-      prisma.housing.update({
-        where: { id: booking.housingId },
-        data: { availability: true }, 
+      prisma.room.update({
+        where: { id: booking.roomId },
+        data: { availableBeds: { increment: 1 } },
       }),
     ]);
 
@@ -359,16 +358,16 @@ export const getBookingsByListing = async (req: Request, res: Response) => {
   try {
     const userId  = req.user?.id;
     const userRole = req.user?.role;
-    const targetHousingId = (req.params.housingId ?? req.params.housing_id) as string | undefined;
+    const targetHostelId = (req.params.housingId ?? req.params.housing_id) as string | undefined;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
-    if (!targetHousingId) {
+    if (!targetHostelId) {
       return res.status(400).json({ success: false, message: "housingId is required" });
     }
 
-    const listing = await prisma.housing.findUnique({ where: { id: targetHousingId } });
+    const listing = await prisma.hostel.findUnique({ where: { id: targetHostelId } });
 
     if (!listing) {
       return res.status(404).json({ success: false, message: "Listing not found" });
@@ -378,7 +377,7 @@ export const getBookingsByListing = async (req: Request, res: Response) => {
     }
 
     const bookings = await prisma.booking.findMany({
-      where: { housingId: targetHousingId },
+      where: { room: { hostelId: targetHostelId } },
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, fullName: true, email: true, phone: true } },
