@@ -24,37 +24,10 @@ import stripeRoutes from "./routes/stripe.routes.js";
 
 const app = express();
 
-const PORT = 5173;
-
-const configuredOrigins = (
-  process.env["CORS_ORIGINS"] ||
-  process.env["FRONTEND_URL"] ||
-  "http://localhost:5173"
-)
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-const allowedOrigins = Array.from(
-  new Set([
-    ...configuredOrigins,
-    `http://localhost:${PORT}`,
-    `http://127.0.0.1:${PORT}`,
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://cdn-unistay.onrender.com",
-  ]),
-);
-
-
+// Allow requests from any origin. We use Bearer/JWT auth (not cookies),
+// so the spec-forbidden "*" + credentials combination is not needed.
 const corsOptions: CorsOptions = {
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    callback(new Error(`CORS blocked origin: ${origin}`));
-  },
-  credentials: true,
+  origin: "*",
 };
 
 // CORS must be registered before any routes so that preflight (OPTIONS)
