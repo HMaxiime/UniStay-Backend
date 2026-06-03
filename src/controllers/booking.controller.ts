@@ -358,13 +358,13 @@ export const getBookingsByListing = async (req: Request, res: Response) => {
   try {
     const userId  = req.user?.id;
     const userRole = req.user?.role;
-    const targetHostelId = (req.params.housingId ?? req.params.housing_id) as string | undefined;
+    const targetHostelId = (req.params.hostelId ?? req.params.housingId ?? req.params.housing_id) as string | undefined;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     if (!targetHostelId) {
-      return res.status(400).json({ success: false, message: "housingId is required" });
+      return res.status(400).json({ success: false, message: "hostelId is required" });
     }
 
     const listing = await prisma.hostel.findUnique({ where: { id: targetHostelId } });
