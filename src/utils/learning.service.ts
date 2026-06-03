@@ -233,6 +233,7 @@ export async function getUserLearningProfile(userId: string) {
       fullName: true,
       email: true,
       role: true,
+      Avatar: true,
       userSkills: { include: { skill: true } },
       certificates: { include: { course: true, skills: { include: { skill: true } } } },
       enrollments: { include: { course: true } },

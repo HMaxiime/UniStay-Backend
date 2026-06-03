@@ -157,7 +157,7 @@ export async function uploadAvatar(req: Request, res: Response) {
 
     return res.status(200).json({
       message: "Avatar uploaded successfully",
-      user,
+      user: { ...user, avatar: user.Avatar },
     });
   } catch (error) {
     console.error("Error uploading avatar:", error);
@@ -207,7 +207,7 @@ export async function updateAvatar(req: Request, res: Response) {
 
     return res.status(200).json({
       message: "Avatar updated successfully",
-      user,
+      user: { ...user, avatar: user.Avatar },
     });
   } catch (error) {
     console.error("Error updating avatar:", error);
