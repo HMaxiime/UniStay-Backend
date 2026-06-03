@@ -10,7 +10,7 @@ import {
   getUserById,
 } from '../utils/auth.service.js'
 
-const ALLOWED_ROLES = ['STUDENT', 'HOST', 'EMPLOYER']
+const ALLOWED_ROLES = ['STUDENT', 'HOST', 'EMPLOYER', 'INSTRUCTOR']
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -19,7 +19,7 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'fullName, email, password and role are required' })
     }
     if (!ALLOWED_ROLES.includes(role)) {
-      return res.status(400).json({ message: 'Role must be STUDENT, HOST, or EMPLOYER' })
+      return res.status(400).json({ message: 'Role must be STUDENT, HOST, EMPLOYER, or INSTRUCTOR' })
     }
     const user = await registerUser({ fullName, email, password, phone, location, role })
     return res.status(201).json({ message: 'User registered successfully', user })
@@ -99,14 +99,15 @@ export const forgotPasswordHandler = async (req: Request, res: Response) => {
 
 export const resetPasswordHandler = async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body
-    if (!token || !newPassword) {
+    const { token, newPassword, password } = req.body
+    const resolvedPassword = newPassword ?? password
+    if (!token || !resolvedPassword) {
       return res.status(400).json({ message: 'token and newPassword are required' })
     }
-    if (newPassword.length < 6) {
+    if (resolvedPassword.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' })
     }
-    const result = await resetPassword(token, newPassword)
+    const result = await resetPassword(token, resolvedPassword)
     return res.status(200).json(result)
   } catch (error: any) {
     return res.status(400).json({ message: error.message })

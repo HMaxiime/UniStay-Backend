@@ -24,24 +24,27 @@ import stripeRoutes from "./routes/stripe.routes.js";
 
 const app = express();
 
-const PORT = process.env["PORT"] || 3000;
+const PORT = 5173;
 
 const configuredOrigins = (
   process.env["CORS_ORIGINS"] ||
   process.env["FRONTEND_URL"] ||
-  "http://localhost:5000"
+  "http://localhost:5173"
 )
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-
 const allowedOrigins = Array.from(
   new Set([
     ...configuredOrigins,
     `http://localhost:${PORT}`,
     `http://127.0.0.1:${PORT}`,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://cdn-unistay.onrender.com",
   ]),
 );
+
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {

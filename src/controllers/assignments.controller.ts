@@ -10,6 +10,7 @@ export async function createAssignment(req: Request, res: Response) {
     const data = createAssignmentSchema.parse(req.body);
     const course = await prisma.course.findUnique({ where: { id: data.courseId } });
     if (!course) return res.status(404).json({ error: "Course not found" });
+    if (course.uploadedBy !== req.userId) return res.status(403).json({ error: "You can only add exams to your own courses" });
 
     const createData: {
       title: string;
@@ -42,9 +43,14 @@ export async function createAssignment(req: Request, res: Response) {
   }
 }
 
-export async function getAssignments(_req: Request, res: Response) {
+export async function getAssignments(req: Request, res: Response) {
   try {
+    if (req.user?.role !== "INSTRUCTOR") {
+      const assignments = await prisma.assignment.findMany({ include: { course: true } });
+      return res.json(assignments);
+    }
     const assignments = await prisma.assignment.findMany({
+      where: { course: { uploadedBy: req.user.id } },
       include: { course: true, questions: { include: { options: true } } },
     });
     res.json(assignments);
@@ -55,6 +61,14 @@ export async function getAssignments(_req: Request, res: Response) {
 
 export async function getAssignmentById(req: Request, res: Response) {
   try {
+    if (req.user?.role !== "INSTRUCTOR") {
+      const assignment = await prisma.assignment.findUnique({
+        where: { id: req.params.id as string },
+        include: { course: true },
+      });
+      if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+      return res.json(assignment);
+    }
     const assignment = await prisma.assignment.findUnique({
       where: { id: req.params.id as string },
       include: { course: true, questions: { include: { options: true } } },
@@ -69,9 +83,13 @@ export async function getAssignmentById(req: Request, res: Response) {
 export async function updateAssignment(req: Request, res: Response) {
   try {
     const data = updateAssignmentSchema.parse(req.body);
+    const existing = await prisma.assignment.findUnique({ where: { id: req.params.id as string }, include: { course: true } });
+    if (!existing) return res.status(404).json({ error: "Assignment not found" });
+    if (existing.course.uploadedBy !== req.userId) return res.status(403).json({ error: "You can only update exams for your own courses" });
     if (data.courseId) {
       const course = await prisma.course.findUnique({ where: { id: data.courseId } });
       if (!course) return res.status(404).json({ error: "Course not found" });
+      if (course.uploadedBy !== req.userId) return res.status(403).json({ error: "You can only move exams to your own courses" });
     }
 
     const updateData: Record<string, string | number | boolean> = {};
@@ -104,6 +122,9 @@ export async function updateAssignment(req: Request, res: Response) {
 
 export async function deleteAssignment(req: Request, res: Response) {
   try {
+    const existing = await prisma.assignment.findUnique({ where: { id: req.params.id as string }, include: { course: true } });
+    if (!existing) return res.status(404).json({ error: "Assignment not found" });
+    if (existing.course.uploadedBy !== req.userId) return res.status(403).json({ error: "You can only delete exams for your own courses" });
     await prisma.assignment.delete({ where: { id: req.params.id as string } });
     res.status(204).send();
   } catch (error) {

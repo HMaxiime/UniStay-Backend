@@ -41,7 +41,7 @@
  *       200:
  *         description: Job applications list
  * /api/applications/{applicationId}/status:
- *   patch:
+ *   put:
  *     summary: Update a job application status
  *     tags: [Job Applications]
  *     security:
@@ -76,11 +76,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [assignmentId]
- *             properties:
- *               assignmentId:
- *                 type: string
+ *             $ref: '#/components/schemas/StartAssignmentInput'
  *     responses:
  *       200:
  *         description: Assignment result started
@@ -138,7 +134,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/AssignmentInput'
+ *             $ref: '#/components/schemas/AssignmentUpdateInput'
  *     responses:
  *       200:
  *         description: Assignment updated
@@ -404,6 +400,12 @@
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/BookingUpdateInput'
  *     responses:
  *       200:
  *         description: Stripe checkout session created
@@ -442,10 +444,30 @@
  *             $ref: '#/components/schemas/StatusInput'
  *     responses:
  *       200:
+ *         description: Booking cancelled/deleted
+ * /api/bookings/approve/{id}:
+ *   put:
+ *     summary: Update booking status (host)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/BookingStatusInput'
+ *     responses:
+ *       200:
  *         description: Booking status updated
  */
 
-/**
 /**
  * @swagger
  * /api/courses:
@@ -498,7 +520,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/CourseInput'
+ *             $ref: '#/components/schemas/CourseUpdateInput'
  *     responses:
  *       200:
  *         description: Course updated
@@ -546,11 +568,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [courseId]
- *             properties:
- *               courseId:
- *                 type: string
+ *             $ref: '#/components/schemas/EnrollmentInput'
  *     responses:
  *       200:
  *         description: Enrollment created
@@ -628,7 +646,7 @@
  *         multipart/form-data:
  *           schema:
  *             allOf:
- *               - $ref: '#/components/schemas/HostelInput'
+ *               - $ref: '#/components/schemas/ListingUpdateInput'
  *               - type: object
  *                 properties:
  *                   images:
@@ -726,17 +744,9 @@
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
- *             allOf:
- *               - $ref: '#/components/schemas/RoomInput'
- *               - type: object
- *                 properties:
- *                   images:
- *                     type: array
- *                     items:
- *                       type: string
- *                       format: binary
+ *             $ref: '#/components/schemas/ListingVerificationInput'
  *     responses:
  *       200:
  *         description: Room updated
@@ -772,6 +782,7 @@
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required: [images]
  *             properties:
  *               images:
  *                 type: array
@@ -990,7 +1001,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/MaterialInput'
+ *             $ref: '#/components/schemas/MaterialUpdateInput'
  *     responses:
  *       200:
  *         description: Material updated
@@ -1038,7 +1049,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/OptionInput'
+ *             $ref: '#/components/schemas/OptionUpdateInput'
  *     responses:
  *       200:
  *         description: Option updated
@@ -1098,7 +1109,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/QuestionInput'
+ *             $ref: '#/components/schemas/QuestionUpdateInput'
  *     responses:
  *       200:
  *         description: Question updated
@@ -1195,15 +1206,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [assignmentResultId, answers]
- *             properties:
- *               assignmentResultId:
- *                 type: string
- *               answers:
- *                 type: array
- *                 items:
- *                   type: object
+ *             $ref: '#/components/schemas/SubmitAssignmentInput'
  *     responses:
  *       200:
  *         description: Answers submitted
@@ -1227,6 +1230,7 @@
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required: [file, materialId]
  *             properties:
  *               file:
  *                 type: string
@@ -1236,6 +1240,26 @@
  *     responses:
  *       201:
  *         description: File uploaded
+ * /api/uploads/avatar:
+ *   post:
+ *     summary: Upload or replace the authenticated user's avatar
+ *     tags: [Uploads]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded and user avatar updated
  * /api/uploads/{id}:
  *   get:
  *     summary: Get uploaded file by ID
@@ -1343,4 +1367,135 @@
  *     responses:
  *       200:
  *         description: User active status updated
+ */
+
+/**
+ * @swagger
+ * /api/uploads/avatar:
+ *   post:
+ *     summary: Upload user avatar
+ *     description: Upload a new avatar image for the authenticated user. Replaces any existing avatar.
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Avatar image file (JPEG, PNG, or WebP)
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar uploaded successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       format: uri
+ *       400:
+ *         description: Invalid request (missing file or invalid format)
+ *       401:
+ *         description: Unauthorized
+ *   put:
+ *     summary: Update user avatar
+ *     description: Replace the authenticated user's avatar with a new image. Automatically removes the old image from storage.
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: New avatar image file (JPEG, PNG, or WebP)
+ *     responses:
+ *       200:
+ *         description: Avatar updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar updated successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       format: uri
+ *       400:
+ *         description: Invalid request (missing file or invalid format)
+ *       401:
+ *         description: Unauthorized
+ *   delete:
+ *     summary: Delete user avatar
+ *     description: Remove the authenticated user's avatar completely
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Avatar deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar deleted successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       nullable: true
+ *       404:
+ *         description: User has no avatar to delete
+ *       401:
+ *         description: Unauthorized
  */
