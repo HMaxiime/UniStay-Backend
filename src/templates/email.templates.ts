@@ -469,6 +469,68 @@ export const bookingConfirmationEmail = (
   `),
 })
 
+export const bookingWaitlistEmail = (
+  fullName: string,
+  housingTitle: string,
+  queuePosition: number,
+  checkIn: string,
+  checkOut: string,
+) => ({
+  subject: '⏳ Booking Waitlisted — UniStay+',
+  html: baseLayout(`
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:52px;line-height:1;">⏳</div>
+      <h2 style="margin:14px 0 8px;color:#1e1b4b;font-size:24px;font-weight:800;">
+        Booking Placed on Waitlist
+      </h2>
+      <p style="margin:0;color:#6b7280;font-size:15px;">
+        Hi <strong>${fullName}</strong>, your booking is confirmed but the room is currently full.
+      </p>
+    </div>
+    ${divider}
+
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="background:#f8fafc;border:1px solid #bae6fd;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+      <tr>
+        <td style="padding:20px 24px;border-bottom:1px solid #bfdbfe;">
+          <p style="margin:0 0 4px;color:#0c4a6e;font-size:11px;text-transform:uppercase;
+                    letter-spacing:0.8px;font-weight:700;">Property</p>
+          <p style="margin:0;color:#0f172a;font-size:20px;font-weight:800;">${housingTitle}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:18px 24px;">
+          <p style="margin:0 0 4px;color:#0c4a6e;font-size:11px;text-transform:uppercase;
+                    letter-spacing:0.8px;font-weight:700;">Waitlist Position</p>
+          <p style="margin:0;color:#0f172a;font-size:15px;font-weight:700;">${queuePosition}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:18px 24px;">
+          <p style="margin:0 0 4px;color:#0c4a6e;font-size:11px;text-transform:uppercase;
+                    letter-spacing:0.8px;font-weight:700;">Check-in</p>
+          <p style="margin:0;color:#0f172a;font-size:15px;font-weight:700;">📅 ${checkIn}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:18px 24px;">
+          <p style="margin:0 0 4px;color:#0c4a6e;font-size:11px;text-transform:uppercase;
+                    letter-spacing:0.8px;font-weight:700;">Check-out</p>
+          <p style="margin:0;color:#0f172a;font-size:15px;font-weight:700;">📅 ${checkOut}</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color:#374151;font-size:14px;line-height:1.8;margin:0 0 20px;">
+      Don't worry — we have placed you in line and will notify you as soon as a spot opens.
+      If you need help or want to explore other room options, feel free to visit your bookings.
+    </p>
+    <div style="text-align:center;">
+      ${btn(`${APP_URL}/my-bookings`, 'View My Bookings')}
+    </div>
+  `),
+})
+
 // ── 8. Booking Cancellation ──────────────────────────────────────────────────
 
 export const bookingCancellationEmail = (

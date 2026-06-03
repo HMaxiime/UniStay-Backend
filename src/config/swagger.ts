@@ -9,7 +9,7 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: "UniStay+ Backend API",
       version: "1.0.0",
-      description: "REST API for UniStay+ authentication, users, housing, jobs, learning, and uploads.",
+      description: "REST API for UniStay+ authentication, users, hostels, rooms, jobs, learning, refunds, and uploads.",
     },
     servers: [
       {
@@ -24,6 +24,7 @@ const options: swaggerJsdoc.Options = {
     tags: [
       { name: "Auth" },
       { name: "Users" },
+      { name: "Avatar" },
       { name: "Skills" },
       { name: "Courses" },
       { name: "Materials" },
@@ -33,8 +34,11 @@ const options: swaggerJsdoc.Options = {
       { name: "Learning" },
       { name: "Jobs" },
       { name: "Job Applications" },
-      { name: "Listings" },
-      { name: "Bookings" },
+      { name: "Hostels" },
+      { name: "Rooms" },
+      { name: "Hostel Bookings" },
+      { name: "Refunds" },
+      { name: "Stripe" },
       { name: "Uploads" },
     ],
     components: {
@@ -237,9 +241,9 @@ const options: swaggerJsdoc.Options = {
             message: { type: "string", example: "We would like to invite you for an interview." },
           },
         },
-        ListingInput: {
+        HostelInput: {
           type: "object",
-          required: ["title", "location", "price"],
+          required: ["name", "location"],
           properties: {
             title: { type: "string", example: "Furnished studio near campus" },
             description: { type: "string", example: "Quiet furnished studio with Wi-Fi and water included." },
@@ -264,7 +268,7 @@ const options: swaggerJsdoc.Options = {
         },
         BookingInput: {
           type: "object",
-          required: ["housingId", "checkIn", "checkOut"],
+          required: ["roomId", "checkIn", "checkOut"],
           properties: {
             housingId: { type: "string", format: "uuid", example: "44444444-4444-4444-8444-444444444444" },
             checkIn: { type: "string", format: "date-time", example: "2026-06-01T12:00:00.000Z" },
@@ -327,15 +331,19 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
-        PaymentProofInput: {
+        RefundRequestInput: {
           type: "object",
-          required: ["paymentProof"],
+          required: ["bookingId"],
           properties: {
-            paymentProof: {
-              type: "string",
-              format: "uri",
-              example: "https://example.com/payment-proof.jpg",
-            },
+            bookingId: { type: "string" },
+            reason: { type: "string" },
+          },
+        },
+        StatusInput: {
+          type: "object",
+          required: ["status"],
+          properties: {
+            status: { type: "string" },
           },
         },
       },

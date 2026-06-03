@@ -43,16 +43,20 @@ enum SkillLevel {
 
 enum BookingStatus {
   PENDING
+  PAYMENT_PENDING
+  PAID
   CONFIRMED
+  WAITLISTED
+  REJECTED
+  COMPLETED
   CANCELLED
-  REJECTED    
-  COMPLETED   
 }
 enum PaymentStatus {
-  UNPAID
-  PENDING_VERIFICATION  
+  PENDING
   PAID
+  FAILED
   REFUNDED
+  CANCELLED
 }
 
 enum MaterialType {
@@ -68,6 +72,18 @@ enum AssignmentStatus {
   COMPLETED
 }
 
+enum RoomCategory {
+  VIP
+  STANDARD
+  BUDGET
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 //////////////////////////////////////////////////////
 // USERS
 //////////////////////////////////////////////////////
@@ -80,14 +96,14 @@ model User {
   password         String
   role             Role      @default(STUDENT)
   location         String?
-  profilePicture   String?
+  avatar           String?
   isActive         Boolean   @default(true)
   resetToken       String?
   resetTokenExpiry DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  housings          Housing[]
+  hostels           Hostel[]
   bookings          Booking[]
   jobs              Job[]
   applications      Application[]
@@ -95,45 +111,105 @@ model User {
   enrollments       Enrollment[]
   certificates      Certificate[]
   assignmentResults AssignmentResult[]
+  announcements     Announcement[]
 }
 
 //////////////////////////////////////////////////////
-// HOUSING
+// HOSTELS & ROOMS
 //////////////////////////////////////////////////////
 
-model Housing {
+model Hostel {
   id                 String             @id @default(uuid())
-  title              String
+  name               String
   location           String
-  description  String?
-  bedrooms     Int?
-  amenities    String[]  @default([])
-  images       String[]  @default([])
-  price              Float
-  availability       Boolean            @default(true)
+  description        String?
+  images             String[]           @default([])
   verificationStatus VerificationStatus @default(PENDING)
   hostId             String
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  host     User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  host  User   @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  rooms Room[]
+}
+
+model Room {
+  id            String       @id @default(uuid())
+  hostelId      String
+  name          String
+  category      RoomCategory
+  capacity      Int
+  availableBeds Int
+  price         Float
+  description   String?
+  amenities     String[]     @default([])
+  images        String[]     @default([])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  hostel   Hostel    @relation(fields: [hostelId], references: [id], onDelete: Cascade)
   bookings Booking[]
 }
 
 model Booking {
-  id        String        @id @default(uuid())
-  userId    String
-  housingId String
-  status    BookingStatus @default(PENDING)
-  paymentStatus  PaymentStatus @default(UNPAID)
-  totalAmount    Float? 
-  checkIn   DateTime
-  checkOut  DateTime
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id            String        @id @default(uuid())
+  userId        String
+  roomId        String
+  status        BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  totalAmount           Float?
+  checkIn               DateTime?
+  checkOut              DateTime?
+  stripeCheckoutSessionId String?
+  stripePaymentIntentId String?
+  stripeChargeId        String?
+  receiptUrl            String?
+  queuePosition         Int?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  housing Housing @relation(fields: [housingId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room          Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  refundRequest RefundRequest?
+}
+
+model RefundRequest {
+  id        String       @id @default(uuid())
+  bookingId String       @unique
+  amount    Float
+  status    RefundStatus @default(PENDING)
+  reason    String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model SystemSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userEmail String?
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id         String   @id @default(uuid())
+  title      String
+  content    String
+  targetRole Role?
+  authorId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 //////////////////////////////////////////////////////

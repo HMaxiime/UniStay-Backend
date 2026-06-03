@@ -41,4 +41,19 @@ const upload = multer({
   limits: { fileSize: 500 * 1024 * 1024 },
 });
 
+const avatarTypes = ["image/jpeg", "image/png", "image/webp"];
+
+export const avatarUpload = multer({
+  storage,
+  fileFilter(_req, file, cb) {
+    if (avatarTypes.includes(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new Error("Avatar must be a JPEG, PNG, or WebP image"));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 export default upload;

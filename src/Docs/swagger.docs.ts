@@ -269,11 +269,11 @@
 
 /**
  * @swagger
- * /api/bookings:
+ * /api/hostel-bookings:
  *   get:
  *     summary: List bookings
- *     description: "Returns a paginated list of bookings. Query params: `status`, `page`, `limit`."
- *     tags: [Bookings]
+ *     description: "Returns a paginated list of hostel bookings. Query params: `status`, `roomId`, `page`, `limit`."
+ *     tags: [Hostel Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -281,7 +281,11 @@
  *         name: status
  *         schema:
  *           type: string
- *           enum: [PENDING, CONFIRMED, CANCELLED, REJECTED, COMPLETED]
+ *           enum: [PENDING, CONFIRMED, CANCELLED, WAITLISTED, REJECTED, PAID, PAYMENT_PENDING]
+ *       - in: query
+ *         name: roomId
+ *         schema:
+ *           type: string
  *       - in: query
  *         name: page
  *         schema:
@@ -292,11 +296,11 @@
  *           type: number
  *     responses:
  *       200:
- *         description: Bookings list
+ *         description: Hostel bookings list
  *   post:
  *     summary: Create a booking
- *     description: Student only. Creates a pending booking for a housing item.
- *     tags: [Bookings]
+ *     description: Student only. Creates a pending booking for a room.
+ *     tags: [Hostel Bookings]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -316,10 +320,61 @@
 
 /**
  * @swagger
- * /api/bookings/{id}:
+ * /api/hostel-bookings/waiting-list:
  *   get:
- *     summary: Get booking by ID
- *     tags: [Bookings]
+ *     summary: Get waiting list for a room
+ *     tags: [Hostel Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Waiting list data
+ */
+
+/**
+ * @swagger
+ * /api/hostel-bookings/reports/platform:
+ *   get:
+ *     summary: Get platform-wide booking reports
+ *     tags: [Hostel Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Platform booking reports
+ */
+
+/**
+ * @swagger
+ * /api/hostel-bookings/reports/hostel/{hostelId}:
+ *   get:
+ *     summary: Get hostel-specific booking reports
+ *     tags: [Hostel Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: hostelId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Hostel booking reports
+ */
+
+/**
+ * @swagger
+ * /api/hostel-bookings/{id}:
+ *   get:
+ *     summary: Get hostel booking by ID
+ *     tags: [Hostel Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -330,12 +385,13 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Booking found
+ *         description: Booking details
  *       404:
  *         description: Booking not found
- *   put:
- *     summary: Update booking (student)
- *     tags: [Bookings]
+ * /api/hostel-bookings/{id}/pay:
+ *   post:
+ *     summary: Create Stripe payment session for a booking
+ *     tags: [Hostel Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -352,12 +408,11 @@
  *             $ref: '#/components/schemas/BookingUpdateInput'
  *     responses:
  *       200:
- *         description: Booking updated
- *       400:
- *         description: Bad request
- *   delete:
- *     summary: Delete or cancel booking (student)
- *     tags: [Bookings]
+ *         description: Stripe checkout session created
+ * /api/hostel-bookings/{id}/cancel:
+ *   post:
+ *     summary: Cancel booking
+ *     tags: [Hostel Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -366,6 +421,27 @@
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Booking cancelled
+ * /api/hostel-bookings/{id}/status:
+ *   patch:
+ *     summary: Update booking status
+ *     tags: [Hostel Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/StatusInput'
  *     responses:
  *       200:
  *         description: Booking cancelled/deleted
@@ -500,16 +576,18 @@
 
 /**
  * @swagger
- * /api/listings:
+ * /api/hostels:
  *   get:
- *     summary: List verified housing listings
- *     tags: [Listings]
+ *     summary: List hostels
+ *     tags: [Hostels]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Listings list
+ *         description: Hostels list
  *   post:
- *     summary: Create listing
- *     tags: [Listings]
+ *     summary: Create hostel
+ *     tags: [Hostels]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -518,7 +596,7 @@
  *         multipart/form-data:
  *           schema:
  *             allOf:
- *               - $ref: '#/components/schemas/ListingInput'
+ *               - $ref: '#/components/schemas/HostelInput'
  *               - type: object
  *                 properties:
  *                   images:
@@ -528,20 +606,20 @@
  *                       format: binary
  *     responses:
  *       201:
- *         description: Listing created
- * /api/listings/me/listings:
+ *         description: Hostel created
+ * /api/hostels/me/hostels:
  *   get:
- *     summary: Get authenticated host listings
- *     tags: [Listings]
+ *     summary: Get authenticated host hostels
+ *     tags: [Hostels]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: My listings
- * /api/listings/{id}:
+ *         description: My hostels
+ * /api/hostels/{id}:
  *   get:
- *     summary: Get listing by ID
- *     tags: [Listings]
+ *     summary: Get hostel by ID
+ *     tags: [Hostels]
  *     parameters:
  *       - in: path
  *         name: id
@@ -550,10 +628,10 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Listing found
+ *         description: Hostel found
  *   put:
- *     summary: Update listing
- *     tags: [Listings]
+ *     summary: Update hostel
+ *     tags: [Hostels]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -578,10 +656,10 @@
  *                       format: binary
  *     responses:
  *       200:
- *         description: Listing updated
+ *         description: Hostel updated
  *   delete:
- *     summary: Delete listing
- *     tags: [Listings]
+ *     summary: Delete hostel
+ *     tags: [Hostels]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -592,11 +670,69 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Listing deleted
- * /api/listings/{id}/verify:
+ *         description: Hostel deleted
+ * /api/hostels/{id}/verify:
  *   patch:
- *     summary: Verify or reject listing
- *     tags: [Listings]
+ *     summary: Verify or reject hostel
+ *     tags: [Hostels]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Hostel verification updated
+ * /api/rooms:
+ *   get:
+ *     summary: List rooms
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Rooms list
+ *   post:
+ *     summary: Create a room
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             allOf:
+ *               - $ref: '#/components/schemas/RoomInput'
+ *               - type: object
+ *                 properties:
+ *                   images:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                       format: binary
+ *     responses:
+ *       201:
+ *         description: Room created
+ * /api/rooms/{id}:
+ *   get:
+ *     summary: Get room by ID
+ *     tags: [Rooms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Room found
+ *   put:
+ *     summary: Update room
+ *     tags: [Rooms]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -613,11 +749,25 @@
  *             $ref: '#/components/schemas/ListingVerificationInput'
  *     responses:
  *       200:
- *         description: Listing verification updated
- * /api/listings/{id}/images:
+ *         description: Room updated
+ *   delete:
+ *     summary: Delete room
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Room deleted
+ * /api/rooms/{id}/images:
  *   post:
- *     summary: Upload listing images
- *     tags: [Listings]
+ *     summary: Upload room images
+ *     tags: [Rooms]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -641,10 +791,10 @@
  *                   format: binary
  *     responses:
  *       200:
- *         description: Images uploaded
+ *         description: Room images uploaded
  *   delete:
- *     summary: Delete listing image
- *     tags: [Listings]
+ *     summary: Delete room image
+ *     tags: [Rooms]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -660,7 +810,64 @@
  *           type: string
  *     responses:
  *       200:
- *         description: Image deleted
+ *         description: Room image deleted
+ * /api/refunds:
+ *   get:
+ *     summary: List refund requests (admin only)
+ *     tags: [Refunds]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Refund requests list
+ *   post:
+ *     summary: Create refund request
+ *     tags: [Refunds]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RefundRequestInput'
+ *     responses:
+ *       201:
+ *         description: Refund request created
+ * /api/refunds/{id}:
+ *   patch:
+ *     summary: Process refund request
+ *     tags: [Refunds]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/StatusInput'
+ *     responses:
+ *       200:
+ *         description: Refund request processed
+ * /api/stripe/webhook:
+ *   post:
+ *     summary: Receive Stripe webhook events
+ *     tags: [Stripe]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook received
  */
 
 /**
@@ -1033,6 +1240,26 @@
  *     responses:
  *       201:
  *         description: File uploaded
+ * /api/uploads/avatar:
+ *   post:
+ *     summary: Upload or replace the authenticated user's avatar
+ *     tags: [Uploads]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded and user avatar updated
  * /api/uploads/{id}:
  *   get:
  *     summary: Get uploaded file by ID
@@ -1140,4 +1367,135 @@
  *     responses:
  *       200:
  *         description: User active status updated
+ */
+
+/**
+ * @swagger
+ * /api/uploads/avatar:
+ *   post:
+ *     summary: Upload user avatar
+ *     description: Upload a new avatar image for the authenticated user. Replaces any existing avatar.
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Avatar image file (JPEG, PNG, or WebP)
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar uploaded successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       format: uri
+ *       400:
+ *         description: Invalid request (missing file or invalid format)
+ *       401:
+ *         description: Unauthorized
+ *   put:
+ *     summary: Update user avatar
+ *     description: Replace the authenticated user's avatar with a new image. Automatically removes the old image from storage.
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: New avatar image file (JPEG, PNG, or WebP)
+ *     responses:
+ *       200:
+ *         description: Avatar updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar updated successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       format: uri
+ *       400:
+ *         description: Invalid request (missing file or invalid format)
+ *       401:
+ *         description: Unauthorized
+ *   delete:
+ *     summary: Delete user avatar
+ *     description: Remove the authenticated user's avatar completely
+ *     tags: [Avatar]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Avatar deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Avatar deleted successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     Avatar:
+ *                       type: string
+ *                       nullable: true
+ *       404:
+ *         description: User has no avatar to delete
+ *       401:
+ *         description: Unauthorized
  */

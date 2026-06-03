@@ -1,6 +1,12 @@
 import type { Request, Response } from "express";
 import prisma from "../config/prisma.js";
-import { deleteFromCloudinary, uploadMaterialToCloudinary } from "../config/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadAvatarToCloudinary,
+  uploadCourseThumbnailToCloudinary,
+  uploadMaterialToCloudinary,
+  extractCloudinaryPublicId,
+} from "../config/cloudinary.js";
 
 function toCloudinaryResourceType(resourceType: string): "image" | "video" | "raw" {
   if (resourceType === "image" || resourceType === "video") {
@@ -47,6 +53,23 @@ export async function uploadFile(req: Request, res: Response) {
   } catch (error) {
     console.error("Error uploading file:", error);
     return res.status(500).json({ error: "Failed to upload file" });
+  }
+}
+
+export async function uploadCourseThumbnail(req: Request, res: Response) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Thumbnail image is required" });
+    }
+    if (!req.file.mimetype.startsWith("image/")) {
+      return res.status(400).json({ error: "Thumbnail must be an image file" });
+    }
+
+    const uploaded = await uploadCourseThumbnailToCloudinary(req.file);
+    return res.status(201).json({ url: uploaded.url });
+  } catch (error) {
+    console.error("Error uploading course thumbnail:", error);
+    return res.status(500).json({ error: "Failed to upload course thumbnail" });
   }
 }
 
@@ -105,5 +128,134 @@ export async function deleteUpload(req: Request, res: Response) {
   } catch (error) {
     console.error("Error deleting upload:", error);
     return res.status(500).json({ error: "Failed to delete upload" });
+  }
+}
+
+export async function uploadAvatar(req: Request, res: Response) {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Avatar image is required" });
+    }
+    if (!req.file.mimetype.startsWith("image/")) {
+      return res.status(400).json({ error: "Avatar must be an image file" });
+    }
+
+    const uploaded = await uploadAvatarToCloudinary(req.file, req.userId);
+    const user = await prisma.user.update({
+      where: { id: req.userId },
+      data: { avatar: uploaded.url },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        avatar: true,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Avatar uploaded successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+    return res.status(500).json({ error: "Failed to upload avatar" });
+  }
+}
+
+export async function updateAvatar(req: Request, res: Response) {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Avatar image is required" });
+    }
+    if (!req.file.mimetype.startsWith("image/")) {
+      return res.status(400).json({ error: "Avatar must be an image file" });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { avatar: true },
+    });
+
+    if (currentUser?.avatar) {
+      const publicId = extractCloudinaryPublicId(currentUser.avatar);
+      if (publicId) {
+        try {
+          await deleteFromCloudinary(publicId, "image");
+        } catch (deleteError) {
+          console.error("Error deleting old avatar from Cloudinary:", deleteError);
+        }
+      }
+    }
+
+    const uploaded = await uploadAvatarToCloudinary(req.file, req.userId);
+    const user = await prisma.user.update({
+      where: { id: req.userId },
+      data: { avatar: uploaded.url },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        avatar: true,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Avatar updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error updating avatar:", error);
+    return res.status(500).json({ error: "Failed to update avatar" });
+  }
+}
+
+export async function deleteAvatar(req: Request, res: Response) {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { avatar: true },
+    });
+
+    if (!user?.avatar) {
+      return res.status(404).json({ error: "User has no avatar to delete" });
+    }
+
+    const publicId = extractCloudinaryPublicId(user.avatar);
+    if (publicId) {
+      try {
+        await deleteFromCloudinary(publicId, "image");
+      } catch (deleteError) {
+        console.error("Error deleting avatar from Cloudinary:", deleteError);
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.userId },
+      data: { avatar: null },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        avatar: true,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Avatar deleted successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error deleting avatar:", error);
+    return res.status(500).json({ error: "Failed to delete avatar" });
   }
 }
