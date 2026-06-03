@@ -3,9 +3,9 @@
 // All templates return { subject, html } and use a shared branded base layout.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const APP_URL = process.env.FRONTEND_URL ?? 'http://localhost:3000'
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'support@unistay.com'
-const YEAR = new Date().getFullYear()
+const APP_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? "support@unistay.com";
+const YEAR = new Date().getFullYear();
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -59,9 +59,9 @@ const baseLayout = (content: string): string => `
   </table>
 </body>
 </html>
-`
+`;
 
-const divider = `<hr style="border:none;border-top:1px solid #e8e6ff;margin:28px 0;"/>`
+const divider = `<hr style="border:none;border-top:1px solid #e8e6ff;margin:28px 0;"/>`;
 
 const btn = (href: string, label: string): string =>
   `<a href="${href}"
@@ -69,19 +69,19 @@ const btn = (href: string, label: string): string =>
             color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:10px;
             font-size:15px;font-weight:700;letter-spacing:0.3px;margin:20px 0;">
      ${label}
-   </a>`
+   </a>`;
 
 const badge = (text: string, color: string, bg: string): string =>
   `<span style="display:inline-block;background:${bg};color:${color};padding:5px 14px;
                border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.8px;
                text-transform:uppercase;">
      ${text}
-   </span>`
+   </span>`;
 
 // ── 1. Welcome / Registration ─────────────────────────────────────────────────
 
 export const welcomeEmail = (fullName: string, role: string) => ({
-  subject: '🎉 Welcome to UniStay+ — Your Account is Ready!',
+  subject: "🎉 Welcome to UniStay+ — Your Account is Ready!",
   html: baseLayout(`
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;line-height:1;">🎉</div>
@@ -101,7 +101,9 @@ export const welcomeEmail = (fullName: string, role: string) => ({
 
     <table width="100%" cellpadding="0" cellspacing="0"
            style="background:#f8f7ff;border-radius:12px;overflow:hidden;margin-bottom:24px;">
-      ${role === 'STUDENT' ? `
+      ${
+        role === "STUDENT"
+          ? `
       <tr>
         <td style="padding:14px 20px;border-bottom:1px solid #e8e6ff;">
           <span style="font-size:18px;">🏠</span>
@@ -120,7 +122,9 @@ export const welcomeEmail = (fullName: string, role: string) => ({
           <span style="color:#374151;font-size:14px;margin-left:10px;font-weight:500;">Access learning materials, courses &amp; assignments</span>
         </td>
       </tr>
-      ` : role === 'HOST' ? `
+      `
+          : role === "HOST"
+            ? `
       <tr>
         <td style="padding:14px 20px;border-bottom:1px solid #e8e6ff;">
           <span style="font-size:18px;">🏠</span>
@@ -133,7 +137,8 @@ export const welcomeEmail = (fullName: string, role: string) => ({
           <span style="color:#374151;font-size:14px;margin-left:10px;font-weight:500;">Manage bookings, availability &amp; payments effortlessly</span>
         </td>
       </tr>
-      ` : `
+      `
+            : `
       <tr>
         <td style="padding:14px 20px;border-bottom:1px solid #e8e6ff;">
           <span style="font-size:18px;">💼</span>
@@ -146,11 +151,12 @@ export const welcomeEmail = (fullName: string, role: string) => ({
           <span style="color:#374151;font-size:14px;margin-left:10px;font-weight:500;">Review applications and hire the best candidates</span>
         </td>
       </tr>
-      `}
+      `
+      }
     </table>
 
     <div style="text-align:center;">
-      ${btn(`${APP_URL}/login`, 'Get Started →')}
+      ${btn(`${APP_URL}/login`, "Get Started →")}
     </div>
     ${divider}
     <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">
@@ -158,12 +164,12 @@ export const welcomeEmail = (fullName: string, role: string) => ({
       <a href="mailto:${SUPPORT_EMAIL}" style="color:#4F46E5;">${SUPPORT_EMAIL}</a> immediately.
     </p>
   `),
-})
+});
 
 // ── 2. Forgot Password (reset request) ───────────────────────────────────────
 
 export const forgotPasswordEmail = (fullName: string, resetLink: string) => ({
-  subject: '🔑 Reset Your UniStay+ Password',
+  subject: "🔑 Reset Your UniStay+ Password",
   html: baseLayout(`
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;line-height:1;">🔑</div>
@@ -180,7 +186,7 @@ export const forgotPasswordEmail = (fullName: string, resetLink: string) => ({
       This link is valid for <strong>1 hour</strong>.
     </p>
     <div style="text-align:center;">
-      ${btn(resetLink, 'Reset My Password')}
+      ${btn(resetLink, "Reset My Password")}
     </div>
     <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;
                 padding:14px 18px;margin:20px 0;">
@@ -194,12 +200,12 @@ export const forgotPasswordEmail = (fullName: string, resetLink: string) => ({
       Or copy this link: <span style="color:#4F46E5;word-break:break-all;">${resetLink}</span>
     </p>
   `),
-})
+});
 
 // ── 3. Password Reset Success ────────────────────────────────────────────────
 
 export const passwordResetSuccessEmail = (fullName: string) => ({
-  subject: '✅ Your UniStay+ Password Has Been Reset',
+  subject: "✅ Your UniStay+ Password Has Been Reset",
   html: baseLayout(`
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;line-height:1;">✅</div>
@@ -216,7 +222,7 @@ export const passwordResetSuccessEmail = (fullName: string) => ({
       please contact our support team immediately.
     </p>
     <div style="text-align:center;">
-      ${btn(`${APP_URL}/login`, 'Log In to UniStay+')}
+      ${btn(`${APP_URL}/login`, "Log In to UniStay+")}
     </div>
     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;
                 padding:14px 18px;margin:20px 0;">
@@ -228,7 +234,7 @@ export const passwordResetSuccessEmail = (fullName: string) => ({
       </p>
     </div>
   `),
-})
+});
 
 // ── 4. Job Application Submitted (confirmation to student) ───────────────────
 
@@ -270,7 +276,7 @@ export const jobApplicationSubmittedEmail = (
         <td style="padding:18px 22px;">
           <p style="margin:0 0 8px;color:#6b7280;font-size:11px;text-transform:uppercase;
                     letter-spacing:0.8px;font-weight:700;">Status</p>
-          ${badge('Pending Review', '#92400e', '#fef3c7')}
+          ${badge("Pending Review", "#92400e", "#fef3c7")}
         </td>
       </tr>
     </table>
@@ -280,10 +286,75 @@ export const jobApplicationSubmittedEmail = (
       In the meantime, feel free to browse more opportunities!
     </p>
     <div style="text-align:center;">
-      ${btn(`${APP_URL}/my-applications`, 'View My Applications')}
+      ${btn(`${APP_URL}/my-applications`, "View My Applications")}
     </div>
   `),
-})
+});
+
+export const jobApplicationReceivedEmail = (
+  employerName: string,
+  studentName: string,
+  studentEmail: string,
+  jobTitle: string,
+  companyName: string,
+  message?: string,
+) => ({
+  subject: `New job application — ${studentName} for ${jobTitle}`,
+  html: baseLayout(`
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:52px;line-height:1;">💼</div>
+      <h2 style="margin:14px 0 8px;color:#1e1b4b;font-size:24px;font-weight:800;">
+        New application received
+      </h2>
+      <p style="margin:0;color:#6b7280;font-size:15px;">
+        Hi <strong>${employerName}</strong>, a new candidate has applied for your job posting.
+      </p>
+    </div>
+    ${divider}
+
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="background:#f8f7ff;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+      <tr>
+        <td style="padding:18px 22px;border-bottom:1px solid #e8e6ff;">
+          <p style="margin:0 0 4px;color:#6b7280;font-size:11px;text-transform:uppercase;
+                    letter-spacing:0.8px;font-weight:700;">Job</p>
+          <p style="margin:0;color:#1e1b4b;font-size:18px;font-weight:800;">${jobTitle}</p>
+          <p style="margin:6px 0 0;color:#374151;font-size:14px;font-weight:600;">${companyName}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:18px 22px;border-bottom:1px solid #e8e6ff;">
+          <p style="margin:0 0 4px;color:#6b7280;font-size:11px;text-transform:uppercase;
+                    letter-spacing:0.8px;font-weight:700;">Applicant</p>
+          <p style="margin:0;color:#1f2937;font-size:16px;font-weight:700;">${studentName}</p>
+          <p style="margin:6px 0 0;color:#374151;font-size:14px;">${studentEmail}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:18px 22px;">
+          <p style="margin:0 0 8px;color:#6b7280;font-size:11px;text-transform:uppercase;
+                    letter-spacing:0.8px;font-weight:700;">Status</p>
+          ${badge("New application", "#92400e", "#fef3c7")}
+        </td>
+      </tr>
+    </table>
+
+    ${
+      message
+        ? `
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:18px 20px;margin-bottom:24px;">
+        <p style="margin:0 0 6px;color:#9a3412;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;">Candidate note</p>
+        <p style="margin:0;color:#7c2d12;font-size:14px;line-height:1.8;white-space:pre-wrap;">${message}</p>
+      </div>
+    `
+        : ""
+    }
+
+    <p style="color:#374151;font-size:14px;line-height:1.8;margin:0;">
+      Open the employer dashboard to review the application and respond directly to the candidate.
+    </p>
+  `),
+});
 
 // ── 5. Job Application Accepted / Qualified ──────────────────────────────────
 
@@ -327,29 +398,33 @@ export const jobApplicationAcceptedEmail = (
         <td style="padding:18px 22px;">
           <p style="margin:0 0 8px;color:#065f46;font-size:11px;text-transform:uppercase;
                     letter-spacing:0.8px;font-weight:700;">Status</p>
-          ${badge('Accepted ✓', '#065f46', '#d1fae5')}
+          ${badge("Accepted ✓", "#065f46", "#d1fae5")}
         </td>
       </tr>
     </table>
 
-    ${message ? `
+    ${
+      message
+        ? `
     <div style="background:#f8f7ff;border-left:4px solid #4F46E5;border-radius:0 10px 10px 0;
                 padding:14px 18px;margin-bottom:20px;">
       <p style="margin:0 0 6px;color:#6b7280;font-size:11px;text-transform:uppercase;
                 letter-spacing:0.8px;font-weight:700;">Message from Employer</p>
       <p style="margin:0;color:#374151;font-size:14px;line-height:1.7;">${message}</p>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
     <p style="color:#374151;font-size:14px;line-height:1.8;margin:0 0 20px;">
       The employer will be in touch with next steps. Keep an eye on your email and be ready
       to respond promptly. Well done — your hard work paid off!
     </p>
     <div style="text-align:center;">
-      ${btn(`${APP_URL}/my-applications`, 'View My Applications')}
+      ${btn(`${APP_URL}/my-applications`, "View My Applications")}
     </div>
   `),
-})
+});
 
 // ── 6. Job Application Rejected ──────────────────────────────────────────────
 
@@ -392,7 +467,7 @@ export const jobApplicationRejectedEmail = (
         <td style="padding:18px 22px;">
           <p style="margin:0 0 8px;color:#991b1b;font-size:11px;text-transform:uppercase;
                     letter-spacing:0.8px;font-weight:700;">Status</p>
-          ${badge('Not Selected', '#991b1b', '#fee2e2')}
+          ${badge("Not Selected", "#991b1b", "#fee2e2")}
         </td>
       </tr>
     </table>
@@ -403,10 +478,10 @@ export const jobApplicationRejectedEmail = (
       Keep building your skills and explore the many other opportunities waiting for you!
     </p>
     <div style="text-align:center;">
-      ${btn(`${APP_URL}/jobs`, 'Browse More Jobs →')}
+      ${btn(`${APP_URL}/jobs`, "Browse More Jobs →")}
     </div>
   `),
-})
+});
 
 // ── 7. Booking Confirmation ──────────────────────────────────────────────────
 
@@ -416,7 +491,7 @@ export const bookingConfirmationEmail = (
   checkIn: string,
   checkOut: string,
 ) => ({
-  subject: '🏠 Booking Confirmed — UniStay+',
+  subject: "🏠 Booking Confirmed — UniStay+",
   html: baseLayout(`
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;line-height:1;">🏠</div>
@@ -464,10 +539,10 @@ export const bookingConfirmationEmail = (
       the agreed time. If you need to make any changes, contact your host in advance.
     </p>
     <div style="text-align:center;">
-      ${btn(`${APP_URL}/my-bookings`, 'View My Bookings')}
+      ${btn(`${APP_URL}/my-bookings`, "View My Bookings")}
     </div>
   `),
-})
+});
 
 export const bookingWaitlistEmail = (
   fullName: string,
@@ -476,7 +551,7 @@ export const bookingWaitlistEmail = (
   checkIn: string,
   checkOut: string,
 ) => ({
-  subject: '⏳ Booking Waitlisted — UniStay+',
+  subject: "⏳ Booking Waitlisted — UniStay+",
   html: baseLayout(`
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;line-height:1;">⏳</div>
@@ -526,10 +601,10 @@ export const bookingWaitlistEmail = (
       If you need help or want to explore other room options, feel free to visit your bookings.
     </p>
     <div style="text-align:center;">
-      ${btn(`${APP_URL}/my-bookings`, 'View My Bookings')}
+      ${btn(`${APP_URL}/my-bookings`, "View My Bookings")}
     </div>
   `),
-})
+});
 
 // ── 8. Booking Cancellation ──────────────────────────────────────────────────
 
@@ -540,7 +615,7 @@ export const bookingCancellationEmail = (
   checkOut: string,
   listingUrl: string,
 ) => ({
-  subject: '❌ Booking Cancelled — UniStay+',
+  subject: "❌ Booking Cancelled — UniStay+",
   html: baseLayout(`
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;line-height:1;">❌</div>
@@ -590,7 +665,7 @@ export const bookingCancellationEmail = (
       options available on UniStay+. Start browsing to find your perfect place!
     </p>
     <div style="text-align:center;">
-      ${btn(listingUrl, 'Browse Available Housing →')}
+      ${btn(listingUrl, "Browse Available Housing →")}
     </div>
   `),
-})
+});

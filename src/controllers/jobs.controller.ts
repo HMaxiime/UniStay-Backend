@@ -1,7 +1,10 @@
 import type { Request, Response } from "express";
 
 import prisma from "../config/prisma.js";
-import { createJobSchema, updateJobSchema } from "../validators/jobs.validator.js";
+import {
+  createJobSchema,
+  updateJobSchema,
+} from "../validators/jobs.validator.js";
 
 export async function getJobs(req: Request, res: Response) {
   try {
@@ -62,7 +65,33 @@ export async function getJobById(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    res.status(200).json({ success: true, data: job });
+    const canSeeApplications =
+      req.user?.role === "ADMIN" ||
+      (req.user?.role === "EMPLOYER" && req.user.id === job.employerId);
+
+    const applications = canSeeApplications
+      ? await prisma.application.findMany({
+          where: { jobId },
+          orderBy: { createdAt: "desc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                location: true,
+                Avatar: true,
+                avatar: true,
+              },
+            },
+          },
+        })
+      : undefined;
+
+    const data = applications ? { ...job, applications } : job;
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error("Error fetching job:", error);
     res.status(500).json({ success: false, message: "Failed to fetch job" });
@@ -79,7 +108,9 @@ export async function createJob(req: Request, res: Response): Promise<void> {
       return;
     }
     if (userRole !== "EMPLOYER" && userRole !== "ADMIN") {
-      res.status(403).json({ success: false, message: "Only employers can create jobs" });
+      res
+        .status(403)
+        .json({ success: false, message: "Only employers can create jobs" });
       return;
     }
 
@@ -120,7 +151,9 @@ export async function updateJob(req: Request, res: Response): Promise<void> {
     }
 
     if (userRole !== "ADMIN" && existing.employerId !== userId) {
-      res.status(403).json({ success: false, message: "Not authorized to update this job" });
+      res
+        .status(403)
+        .json({ success: false, message: "Not authorized to update this job" });
       return;
     }
 
@@ -132,7 +165,9 @@ export async function updateJob(req: Request, res: Response): Promise<void> {
         ...(parsed.title !== undefined && { title: parsed.title }),
         ...(parsed.location !== undefined && { location: parsed.location }),
         ...(parsed.salary !== undefined && { salary: parsed.salary }),
-        ...(parsed.scheduleType !== undefined && { scheduleType: parsed.scheduleType }),
+        ...(parsed.scheduleType !== undefined && {
+          scheduleType: parsed.scheduleType,
+        }),
       },
     });
 
@@ -161,7 +196,9 @@ export async function deleteJob(req: Request, res: Response): Promise<void> {
     }
 
     if (userRole !== "ADMIN" && existing.employerId !== userId) {
-      res.status(403).json({ success: false, message: "Not authorized to delete this job" });
+      res
+        .status(403)
+        .json({ success: false, message: "Not authorized to delete this job" });
       return;
     }
 

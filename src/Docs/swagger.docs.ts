@@ -9,6 +9,15 @@
  *     responses:
  *       200:
  *         description: Student applications list
+ * /api/applications/employer:
+ *   get:
+ *     summary: List all applications received by the authenticated employer
+ *     tags: [Job Applications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Employer applications list
  * /api/applications/jobs/{jobId}:
  *   post:
  *     summary: Apply for a job as a student
@@ -265,7 +274,6 @@
  *       400:
  *         description: Bad request
  */
-
 
 /**
  * @swagger
