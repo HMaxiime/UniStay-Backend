@@ -4,16 +4,22 @@ import {
   deleteJob,
   getJobById,
   getJobs,
+  getMyJobs,
   updateJob,
 } from "../controllers/jobs.controller.js";
-import { authenticate , requireEmployer } from "../middleware/auth.middleware.js";
+import {
+  authenticate,
+  optionalAuthenticate,
+  requireEmployer,
+} from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 const auth = authenticate as unknown as RequestHandler;
 const employer = requireEmployer as unknown as RequestHandler;
 
 router.get("/", getJobs);
-router.get("/:id", getJobById);
+router.get("/mine", auth, getMyJobs as unknown as RequestHandler);
+router.get("/:id", optionalAuthenticate, getJobById);
 router.post("/", auth, employer, createJob as unknown as RequestHandler);
 router.put("/:id", auth, employer, updateJob as unknown as RequestHandler);
 router.delete("/:id", auth, employer, deleteJob as unknown as RequestHandler);
