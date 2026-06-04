@@ -4,6 +4,7 @@ import {
   deleteJob,
   getJobById,
   getJobs,
+  getMyJobs,
   updateJob,
 } from "../controllers/jobs.controller.js";
 import {
@@ -17,6 +18,7 @@ const auth = authenticate as unknown as RequestHandler;
 const employer = requireEmployer as unknown as RequestHandler;
 
 router.get("/", getJobs);
+router.get("/mine", auth, getMyJobs as unknown as RequestHandler);
 router.get("/:id", optionalAuthenticate, getJobById);
 router.post("/", auth, employer, createJob as unknown as RequestHandler);
 router.put("/:id", auth, employer, updateJob as unknown as RequestHandler);

@@ -49,6 +49,28 @@ export async function getJobs(req: Request, res: Response) {
   }
 }
 
+export async function getMyJobs(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+    const jobs = await prisma.job.findMany({
+      where: { employerId: userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        employer: { select: { id: true, fullName: true, email: true } },
+        jobSkills: { include: { skill: true } },
+      },
+    });
+    res.status(200).json({ success: true, data: jobs });
+  } catch (error) {
+    console.error('Error fetching employer jobs:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch jobs' });
+  }
+}
+
 export async function getJobById(req: Request, res: Response): Promise<void> {
   try {
     const jobId = req.params.id as string;
