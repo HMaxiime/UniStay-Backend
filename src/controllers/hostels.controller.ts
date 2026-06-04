@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
+import type { RoomCategory } from "@prisma/client";
 import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
@@ -27,6 +28,27 @@ const logActivity = async (userId: string | undefined, action: string, details: 
     console.error("Failed to log activity:", err);
   }
 };
+
+function parseAmenities(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed.map(String);
+      } catch {
+        // fall back to comma-separated strings
+      }
+    }
+    return trimmed
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
 
 // ─── GET ALL HOSTELS ─────────────────────────────────────────────────────────
 export const getHostels = async (req: Request, res: Response) => {
@@ -82,9 +104,17 @@ export const getHostels = async (req: Request, res: Response) => {
       prisma.hostel.count({ where: filters }),
     ]);
 
+    const hostelsWithRoomMeta = hostels.map((hostel) => ({
+      ...hostel,
+      price: hostel.rooms[0]?.price ?? null,
+      firstRoomId: hostel.rooms[0]?.id ?? null,
+      availableBeds: hostel.rooms.reduce((sum, room) => sum + (room.availableBeds ?? 0), 0),
+      available: hostel.rooms.some((room) => room.availableBeds > 0),
+    }));
+
     return res.status(200).json({
       success: true,
-      data: hostels,
+      data: hostelsWithRoomMeta,
       meta: {
         total,
         page: Number(page),
@@ -122,7 +152,15 @@ export const getHostelById = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: "Hostel not found" });
     }
 
-    return res.status(200).json({ success: true, data: hostel });
+    const hostelWithMeta = {
+      ...hostel,
+      price: hostel.rooms[0]?.price ?? null,
+      firstRoomId: hostel.rooms[0]?.id ?? null,
+      availableBeds: hostel.rooms.reduce((sum, room) => sum + (room.availableBeds ?? 0), 0),
+      available: hostel.rooms.some((room) => room.availableBeds > 0),
+    };
+
+    return res.status(200).json({ success: true, data: hostelWithMeta });
   } catch (error) {
     console.error("getHostelById error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
@@ -143,10 +181,37 @@ export const createHostel = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: "Only hosts and admins can create hostels" });
     }
 
-    const { name, location, description } = req.body;
+    const { name, location, description, roomName, category, capacity, price, amenities, bedrooms } = req.body;
 
     if (!name || !location) {
       return res.status(400).json({ success: false, message: "name and location are required" });
+    }
+
+    const parsedCapacity = capacity !== undefined ? Number(capacity) : bedrooms !== undefined ? Number(bedrooms) : undefined;
+    const hasRoomPayload = category !== undefined || parsedCapacity !== undefined || price !== undefined || roomName !== undefined || amenities !== undefined;
+    const parsedPrice = price !== undefined ? Number(price) : undefined;
+
+    if (hasRoomPayload) {
+      if (!category || parsedCapacity === undefined || parsedPrice === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: "Room details are required when creating a listing: category, capacity, and price must be provided.",
+        });
+      }
+
+      if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
+        return res.status(400).json({ success: false, message: "Room price must be a positive number." });
+      }
+
+      if (category === "VIP" && parsedCapacity !== 2) {
+        return res.status(400).json({ success: false, message: "VIP Rooms must have a capacity of exactly 2 students per room." });
+      }
+      if (category === "STANDARD" && parsedCapacity !== 4) {
+        return res.status(400).json({ success: false, message: "Standard Rooms must have a capacity of exactly 4 students per room." });
+      }
+      if (category === "BUDGET" && (parsedCapacity < 6 || parsedCapacity > 8)) {
+        return res.status(400).json({ success: false, message: "Budget Rooms must have a capacity of 6 to 8 students per room." });
+      }
     }
 
     const uploadedImages: string[] = [];
@@ -167,15 +232,41 @@ export const createHostel = async (req: Request, res: Response) => {
         images: uploadedImages,
         hostId: userId,
         verificationStatus: "PENDING",
+        ...(hasRoomPayload
+          ? {
+              rooms: {
+                create: {
+                  name: String(roomName ?? `${name} Room`),
+                  category: category as RoomCategory,
+                  capacity: parsedCapacity ?? 0,
+                  availableBeds: parsedCapacity ?? 0,
+                  price: parsedPrice ?? 0,
+                  description: description ?? null,
+                  amenities: parseAmenities(amenities),
+                },
+              },
+            }
+          : {}),
+      },
+      include: {
+        rooms: true,
       },
     });
+
+    const hostelWithMeta = {
+      ...hostel,
+      price: hostel.rooms[0]?.price ?? null,
+      firstRoomId: hostel.rooms[0]?.id ?? null,
+      availableBeds: hostel.rooms.reduce((sum, room) => sum + (room.availableBeds ?? 0), 0),
+      available: hostel.rooms.some((room) => room.availableBeds > 0),
+    };
 
     await logActivity(userId, "HOSTEL_CREATION", `Created hostel ${name} (${hostel.id})`);
 
     return res.status(201).json({
       success: true,
       message: "Hostel created and pending verification",
-      data: hostel,
+      data: hostelWithMeta,
     });
   } catch (error) {
     console.error("createHostel error:", error);

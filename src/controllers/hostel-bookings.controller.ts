@@ -116,10 +116,23 @@ export const createBooking = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "roomId is required" });
     }
 
-    const room = await prisma.room.findUnique({
+    let room = await prisma.room.findUnique({
       where: { id: roomId },
       include: { hostel: true },
     });
+
+    if (!room) {
+      const hostel = await prisma.hostel.findUnique({ where: { id: roomId } });
+      if (hostel) {
+        room = await prisma.room.findFirst({
+          where: { hostelId: roomId, availableBeds: { gt: 0 } },
+          include: { hostel: true },
+        }) ?? await prisma.room.findFirst({
+          where: { hostelId: roomId },
+          include: { hostel: true },
+        });
+      }
+    }
 
     if (!room) {
       return res.status(404).json({ success: false, message: "Room not found" });
