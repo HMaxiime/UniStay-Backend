@@ -2,6 +2,7 @@ import prisma from "../config/prisma.js";
 import type { Request, Response } from "express";
 import { sendEmail } from "../config/email.js";
 import { createNotification } from "../services/notifications.service.js";
+import { uploadBufferToCloudinary } from "../config/cloudinary.js";
 import {
   jobApplicationSubmittedEmail,
   jobApplicationReceivedEmail,
@@ -282,9 +283,24 @@ export async function updateJobApplicationStatus(req: Request, res: Response) {
         .json({ error: "Not authorized to update this application" });
     }
 
+    // Merge rejection reason into the stored message JSON so the employer can
+    // display it when reviewing the rejected application later.
+    let mergedMessage: string | undefined;
+    if (status === "REJECTED" && message?.trim()) {
+      try {
+        const existing = application.message ? JSON.parse(application.message) : {};
+        mergedMessage = JSON.stringify({ ...existing, rejectionReason: String(message).trim() });
+      } catch {
+        mergedMessage = JSON.stringify({ rejectionReason: String(message).trim() });
+      }
+    }
+
     const updated = await prisma.application.update({
       where: { id: applicationId },
-      data: { status },
+      data: {
+        status,
+        ...(mergedMessage !== undefined ? { message: mergedMessage } : {}),
+      },
       include: {
         user: { select: { id: true, fullName: true, email: true } },
         job: { include: { employer: { select: { fullName: true } } } },
@@ -325,5 +341,45 @@ export async function updateJobApplicationStatus(req: Request, res: Response) {
   } catch (error) {
     console.error("Error updating job application:", error);
     return res.status(500).json({ error: "Failed to update job application" });
+  }
+}
+
+// ── Upload resume for an application (student) ────────────────────────────────
+
+export async function uploadApplicationResume(req: Request, res: Response) {
+  try {
+    const applicationId = req.params.id as string;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const application = await prisma.application.findUnique({ where: { id: applicationId } });
+    if (!application) {
+      return res.status(404).json({ error: "Application not found" });
+    }
+    if (application.userId !== userId) {
+      return res.status(403).json({ error: "Not authorized to upload resume for this application" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Resume file is required" });
+    }
+
+    const result = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "unistay/resumes",
+      req.file.originalname,
+    );
+
+    const updated = await prisma.application.update({
+      where: { id: applicationId },
+      data: { resumeUrl: result.url },
+    });
+
+    return res.json({ success: true, resumeUrl: result.url, applicationId: updated.id });
+  } catch (error) {
+    console.error("Error uploading resume:", error);
+    return res.status(500).json({ error: "Failed to upload resume" });
   }
 }
