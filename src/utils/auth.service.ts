@@ -77,7 +77,6 @@ export const updateProfile = async (
       email: true,
       phone: true,
       location: true,
-      Avatar: true,
       avatar: true,
       role: true,
     },
