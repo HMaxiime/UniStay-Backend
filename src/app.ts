@@ -22,13 +22,27 @@ import studentAnswersRoutes from "./routes/student-answers.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
 import avatarRoutes from "./routes/avatar.routes.js";
 import stripeRoutes from "./routes/stripe.routes.js";
+import housingRoutes from "./routes/housing.routes.js";
 
 const app = express();
 
-// Allow requests from any origin. We use Bearer/JWT auth (not cookies),
-// so the spec-forbidden "*" + credentials combination is not needed.
+const configuredOrigins = (process.env["CORS_ORIGINS"] || process.env["FRONTEND_URL"] || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 const corsOptions: CorsOptions = {
-  origin: "*",
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (configuredOrigins.includes("*") || configuredOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS blocked origin: ${origin}`));
+  },
+  credentials: true,
 };
 
 // CORS must be registered before any routes so that preflight (OPTIONS)
@@ -69,6 +83,7 @@ app.use("/api/student-answers", studentAnswersRoutes);
 app.use("/api/uploads", uploadsRoutes);
 app.use("/api/avatar", avatarRoutes);
 app.use("/api/stripe", stripeRoutes);
+app.use("/api/listings", housingRoutes);
 
 app.get("/", (_req, res) => {
   res.json({ message: "UniStay+ API is running" });

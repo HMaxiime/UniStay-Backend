@@ -4,6 +4,7 @@ import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
   extractCloudinaryPublicId,
+  compressImage,
 } from "../config/cloudinary.js";
 
 // Helper to log audit actions
@@ -151,8 +152,8 @@ export const createHostel = async (req: Request, res: Response) => {
     const uploadedImages: string[] = [];
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       const uploadResults = await Promise.all(
-        (req.files as Express.Multer.File[]).map((file) =>
-          uploadBufferToCloudinary(file.buffer, "unistay/hostels", file.originalname)
+        (req.files as Express.Multer.File[]).map(async (file) =>
+          uploadBufferToCloudinary(await compressImage(file.buffer), "unistay/hostels", file.originalname)
         )
       );
       uploadedImages.push(...uploadResults.map((r) => r.url));
@@ -212,8 +213,8 @@ export const updateHostel = async (req: Request, res: Response) => {
     let mergedImages = hostel.images as string[];
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       const uploadResults = await Promise.all(
-        (req.files as Express.Multer.File[]).map((file) =>
-          uploadBufferToCloudinary(file.buffer, "unistay/hostels", file.originalname)
+        (req.files as Express.Multer.File[]).map(async (file) =>
+          uploadBufferToCloudinary(await compressImage(file.buffer), "unistay/hostels", file.originalname)
         )
       );
       mergedImages = [...mergedImages, ...uploadResults.map((r) => r.url)];

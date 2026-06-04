@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import type { UploadApiResponse } from "cloudinary";
+import sharp from "sharp";
 
 type CloudinaryUploadResult = {
   url: string;
@@ -49,6 +50,13 @@ function toUploadResult(result: UploadApiResponse): CloudinaryUploadResult {
     format: result.format,
     bytes: result.bytes,
   };
+}
+
+export async function compressImage(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .resize({ width: 1920, withoutEnlargement: true })
+    .jpeg({ quality: 80 })
+    .toBuffer();
 }
 
 export async function uploadBufferToCloudinary(
