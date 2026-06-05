@@ -45,13 +45,38 @@ export async function createAssignment(req: Request, res: Response) {
 
 export async function getAssignments(req: Request, res: Response) {
   try {
+    const standalone = req.query.standalone === "true"
+      ? true
+      : req.query.standalone === "false"
+        ? false
+        : undefined;
+
     if (req.user?.role !== "INSTRUCTOR") {
-      const assignments = await prisma.assignment.findMany({ include: { course: true } });
+      const assignments = await prisma.assignment.findMany({
+        ...(standalone === undefined ? {} : { where: { isStandalone: standalone } }),
+        select: {
+          id: true,
+          title: true,
+          courseId: true,
+          isStandalone: true,
+          timeLimit: true,
+          passingScore: true,
+          createdAt: true,
+          updatedAt: true,
+          course: { select: { id: true, title: true } },
+          _count: { select: { questions: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
       return res.json(assignments);
     }
     const assignments = await prisma.assignment.findMany({
-      where: { course: { uploadedBy: req.user.id } },
+      where: {
+        course: { uploadedBy: req.user.id },
+        ...(standalone === undefined ? {} : { isStandalone: standalone }),
+      },
       include: { course: true, questions: { include: { options: true } } },
+      orderBy: { createdAt: "desc" },
     });
     res.json(assignments);
   } catch (error) {
