@@ -23,6 +23,29 @@ export async function startAssignment(userId: string, assignmentId: string) {
   if (assignment.questions.length === 0) {
     throw new Error("This assignment has no questions yet");
   }
+  const existingCertificate = await prisma.certificate.findUnique({
+    where: {
+      userId_courseId: {
+        userId,
+        courseId: assignment.courseId,
+      },
+    },
+  });
+  if (existingCertificate) {
+    throw new Error("You already earned this course certificate. You cannot take this exam again.");
+  }
+
+  const completedEnrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: {
+        userId,
+        courseId: assignment.courseId,
+      },
+    },
+  });
+  if ((completedEnrollment?.progress ?? 0) >= 100) {
+    throw new Error("You already completed this course. You cannot take this exam again.");
+  }
 
   const selectedQuestions = shuffle(assignment.questions).slice(0, EXAM_QUESTION_LIMIT);
 
@@ -75,6 +98,18 @@ export async function submitAssignment(
   if (!result) throw new Error("Assignment result not found");
   if (result.userId !== userId) throw new Error("You cannot submit this assignment result");
   if (result.status === "COMPLETED") throw new Error("This assignment result is already completed");
+
+  const existingCertificate = await prisma.certificate.findUnique({
+    where: {
+      userId_courseId: {
+        userId,
+        courseId: result.assignment.courseId,
+      },
+    },
+  });
+  if (existingCertificate) {
+    throw new Error("You already earned this course certificate. You cannot submit this exam again.");
+  }
 
   const selectedQuestions = result.questions.map((item) => item.question);
   const validQuestionIds = new Set(selectedQuestions.map((question) => question.id));
@@ -233,7 +268,7 @@ export async function getUserLearningProfile(userId: string) {
       fullName: true,
       email: true,
       role: true,
-      Avatar: true,
+      avatar: true,
       userSkills: { include: { skill: true } },
       certificates: { include: { course: true, skills: { include: { skill: true } } } },
       enrollments: { include: { course: true } },

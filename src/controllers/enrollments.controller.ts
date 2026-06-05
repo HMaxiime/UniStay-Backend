@@ -9,6 +9,21 @@ export async function createEnrollment(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
+    const existingCertificate = await prisma.certificate.findUnique({
+      where: { userId_courseId: { userId, courseId: data.courseId } },
+    });
+    if (existingCertificate) {
+      return res.status(400).json({ error: "You already completed this course and earned its certificate." });
+    }
+
+    const existingEnrollment = await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId: data.courseId } },
+      include: { course: true, user: { select: { id: true, fullName: true, email: true } } },
+    });
+    if (existingEnrollment) {
+      return res.status(400).json({ error: "You are already enrolled in this course." });
+    }
+
     const enrollment = await prisma.enrollment.create({
       data: { userId, courseId: data.courseId },
       include: { course: true, user: { select: { id: true, fullName: true, email: true } } },
@@ -26,7 +41,7 @@ export async function getMyLearningProfile(req: Request, res: Response) {
     if (!profile) return res.status(404).json({ error: "User not found" });
     res.json({
       ...profile,
-      avatar: profile.Avatar
+      avatar: profile.avatar
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch learning profile" });
