@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
+import type { RoomCategory } from "@prisma/client";
 import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
@@ -50,6 +51,17 @@ function parseAmenities(value: unknown): string[] {
 }
 
 // ─── GET ALL ROOMS ───────────────────────────────────────────────────────────
+function parseRoomCategory(value: unknown): RoomCategory | null {
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (normalized === "VIP" || normalized === "STANDARD" || normalized === "BUDGET") {
+    return normalized;
+  }
+
+  return null;
+}
+
 export const getRooms = async (req: Request, res: Response) => {
   try {
     const {
@@ -70,7 +82,11 @@ export const getRooms = async (req: Request, res: Response) => {
     }
 
     if (category) {
-      filters.category = String(category);
+      const parsedCategory = parseRoomCategory(String(category));
+      if (!parsedCategory) {
+        return res.status(400).json({ success: false, message: "Room category must be VIP, STANDARD, or BUDGET." });
+      }
+      filters.category = parsedCategory;
     }
 
     if (min_price || max_price) {
@@ -198,7 +214,7 @@ export const createRoom = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { hostelId, name, category, capacity, price, description, amenities } = req.body;
+    const { hostelId, name, category, capacity, price, description, amenities, roomNumberStart, roomNumberEnd } = req.body;
 
     if (!hostelId || !name || !category || capacity === undefined || price === undefined) {
       return res.status(400).json({ success: false, message: "hostelId, name, category, capacity, and price are required" });
@@ -213,14 +229,24 @@ export const createRoom = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: "Forbidden: You do not own this hostel" });
     }
 
-    // Validate category capacity constraints
     const cap = Number(capacity);
-    if (category === "VIP" && cap !== 2) {
-      return res.status(400).json({ success: false, message: "VIP Rooms must have a capacity of exactly 2 students per room." });
-    } else if (category === "STANDARD" && cap !== 4) {
-      return res.status(400).json({ success: false, message: "Standard Rooms must have a capacity of exactly 4 students per room." });
-    } else if (category === "BUDGET" && (cap < 6 || cap > 8)) {
-      return res.status(400).json({ success: false, message: "Budget Rooms must have a capacity of 6 to 8 students per room." });
+    const parsedCategory = parseRoomCategory(category);
+    if (!parsedCategory) {
+      return res.status(400).json({ success: false, message: "Room category must be VIP, STANDARD, or BUDGET." });
+    }
+
+    if (Number.isNaN(cap) || cap <= 0) {
+      return res.status(400).json({ success: false, message: "Room bed capacity must be a positive number." });
+    }
+
+    const parsedRoomNumberStart = roomNumberStart !== undefined && roomNumberStart !== "" ? Number(roomNumberStart) : undefined;
+    const parsedRoomNumberEnd = roomNumberEnd !== undefined && roomNumberEnd !== "" ? Number(roomNumberEnd) : undefined;
+    if (
+      (parsedRoomNumberStart !== undefined && Number.isNaN(parsedRoomNumberStart))
+      || (parsedRoomNumberEnd !== undefined && Number.isNaN(parsedRoomNumberEnd))
+      || (parsedRoomNumberStart !== undefined && parsedRoomNumberEnd !== undefined && parsedRoomNumberEnd < parsedRoomNumberStart)
+    ) {
+      return res.status(400).json({ success: false, message: "Room number range must have a valid start and end." });
     }
 
     const uploadedImages: string[] = [];
@@ -237,9 +263,11 @@ export const createRoom = async (req: Request, res: Response) => {
       data: {
         hostelId,
         name,
-        category,
+        category: parsedCategory,
         capacity: cap,
         availableBeds: cap, // All beds available initially
+        roomNumberStart: parsedRoomNumberStart ?? null,
+        roomNumberEnd: parsedRoomNumberEnd ?? null,
         price: Number(price),
         description: description ?? null,
         amenities: parseAmenities(amenities),
@@ -289,19 +317,28 @@ export const updateRoom = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: "Forbidden: You do not own this room's hostel" });
     }
 
-    const { name, category, capacity, availableBeds, price, description, amenities } = req.body;
+    const { name, category, capacity, availableBeds, price, description, amenities, roomNumberStart, roomNumberEnd } = req.body;
 
-    let targetCategory = category || room.category;
+    const parsedCategory = category !== undefined ? parseRoomCategory(category) : null;
+    if (category !== undefined && !parsedCategory) {
+      return res.status(400).json({ success: false, message: "Room category must be VIP, STANDARD, or BUDGET." });
+    }
+
+    let targetCategory = parsedCategory ?? room.category;
     let targetCapacity = capacity !== undefined ? Number(capacity) : room.capacity;
 
-    if (category || capacity !== undefined) {
-      if (targetCategory === "VIP" && targetCapacity !== 2) {
-        return res.status(400).json({ success: false, message: "VIP Rooms must have a capacity of exactly 2 students." });
-      } else if (targetCategory === "STANDARD" && targetCapacity !== 4) {
-        return res.status(400).json({ success: false, message: "Standard Rooms must have a capacity of exactly 4 students." });
-      } else if (targetCategory === "BUDGET" && (targetCapacity < 6 || targetCapacity > 8)) {
-        return res.status(400).json({ success: false, message: "Budget Rooms must have a capacity of 6 to 8 students." });
-      }
+    if (Number.isNaN(targetCapacity) || targetCapacity <= 0) {
+      return res.status(400).json({ success: false, message: "Room bed capacity must be a positive number." });
+    }
+
+    const parsedRoomNumberStart = roomNumberStart !== undefined && roomNumberStart !== "" ? Number(roomNumberStart) : undefined;
+    const parsedRoomNumberEnd = roomNumberEnd !== undefined && roomNumberEnd !== "" ? Number(roomNumberEnd) : undefined;
+    if (
+      (parsedRoomNumberStart !== undefined && Number.isNaN(parsedRoomNumberStart))
+      || (parsedRoomNumberEnd !== undefined && Number.isNaN(parsedRoomNumberEnd))
+      || (parsedRoomNumberStart !== undefined && parsedRoomNumberEnd !== undefined && parsedRoomNumberEnd < parsedRoomNumberStart)
+    ) {
+      return res.status(400).json({ success: false, message: "Room number range must have a valid start and end." });
     }
 
     // Determine available beds safely: if capacity changed, adjust available beds
@@ -331,6 +368,8 @@ export const updateRoom = async (req: Request, res: Response) => {
         category: targetCategory,
         capacity: targetCapacity,
         availableBeds: targetAvailableBeds,
+        ...(parsedRoomNumberStart !== undefined && { roomNumberStart: parsedRoomNumberStart }),
+        ...(parsedRoomNumberEnd !== undefined && { roomNumberEnd: parsedRoomNumberEnd }),
         ...(price !== undefined && { price: Number(price) }),
         description: description !== undefined ? description : room.description,
         ...(amenities !== undefined && { amenities: parseAmenities(amenities) }),

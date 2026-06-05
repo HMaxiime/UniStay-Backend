@@ -4,16 +4,13 @@ import { prisma } from "../lib/prisma.js";
 import stripe from "../config/stripe.js";
 import { sendEmail } from "../config/email.js";
 import { createNotification } from "../services/notifications.service.js";
-import { bookingConfirmationEmail, bookingWaitlistEmail } from "../templates/email.templates.js";
+import { bookingConfirmationEmail } from "../templates/email.templates.js";
 
 type BookingEmailData = {
   userEmail: string;
   fullName: string;
   roomName: string;
-  checkIn?: Date | null;
-  checkOut?: Date | null;
-  status: "CONFIRMED" | "WAITLISTED";
-  queuePosition: number | null;
+  allocation?: string | null;
 };
 
 const logActivity = async (userId: string | undefined, action: string, details: string) => {
@@ -35,6 +32,13 @@ const logActivity = async (userId: string | undefined, action: string, details: 
     console.error("Failed to log Stripe activity:", err);
   }
 };
+
+function nextAllocatedRoomNumber(room: any) {
+  if (room.roomNumberStart == null || room.roomNumberEnd == null) return null;
+  const paidSlots = Math.max(0, Number(room.capacity ?? 0) - Number(room.availableBeds ?? 0));
+  const rangeSize = Math.max(1, Number(room.roomNumberEnd) - Number(room.roomNumberStart) + 1);
+  return Number(room.roomNumberStart) + (paidSlots % rangeSize);
+}
 
 export const stripeWebhook = async (req: Request, res: Response) => {
   const signature = req.headers["stripe-signature"];
@@ -93,34 +97,27 @@ export const stripeWebhook = async (req: Request, res: Response) => {
             throw new Error("ROOM_NOT_FOUND");
           }
 
-          let newStatus: "CONFIRMED" | "WAITLISTED" = "CONFIRMED";
-          let queuePosition: number | null = null;
-
-          if (room.availableBeds > 0) {
-            await prisma.room.update({
-              where: { id: room.id },
-              data: { availableBeds: { decrement: 1 } },
-            });
-          } else {
-            newStatus = "WAITLISTED";
-            const waitlistCount = await prisma.booking.count({
-              where: {
-                roomId: room.id,
-                status: "WAITLISTED",
-              },
-            });
-            queuePosition = waitlistCount + 1;
+          if (room.availableBeds <= 0) {
+            throw new Error("NO_AVAILABLE_BEDS");
           }
+
+          await prisma.room.update({
+            where: { id: room.id },
+            data: { availableBeds: { decrement: 1 } },
+          });
+
+          const allocatedRoomNumber = nextAllocatedRoomNumber(room);
+          const bedAssignment = allocatedRoomNumber ? `Room ${allocatedRoomNumber}` : `${room.name} - Bed ${Math.max(1, room.capacity - room.availableBeds + 1)}`;
 
           await prisma.booking.update({
             where: { id: bookingId },
             data: {
-              status: newStatus,
+              status: "COMPLETED",
               paymentStatus: "PAID",
               stripePaymentIntentId: paymentIntentId ?? null,
               stripeChargeId: chargeId,
               receiptUrl,
-              queuePosition,
+              allocatedRoomNumber,
             },
           });
 
@@ -128,23 +125,17 @@ export const stripeWebhook = async (req: Request, res: Response) => {
             userEmail: booking.user?.email ?? "",
             fullName: booking.user?.fullName ?? "",
             roomName: room.name,
-            checkIn: booking.checkIn,
-            checkOut: booking.checkOut,
-            status: newStatus,
-            queuePosition,
+            allocation: bedAssignment,
           };
 
-          await logActivity(booking.userId, "STRIPE_PAYMENT_CONFIRMED", `Stripe payment confirmed for booking ${bookingId}. Allocated: ${newStatus}`);
+          await logActivity(booking.userId, "STRIPE_PAYMENT_CONFIRMED", `Stripe payment confirmed for hostel application ${bookingId}.`);
 
           await createNotification({
             userId: booking.userId,
-            type: newStatus === "CONFIRMED" ? "BOOKING_CONFIRMED" : "BOOKING_WAITLISTED",
-            title: newStatus === "CONFIRMED" ? "Booking Confirmed" : "Placed on Waitlist",
-            message:
-              newStatus === "CONFIRMED"
-                ? `Your payment was successful and your booking for room ${room.name} has been CONFIRMED.`
-                : `Your payment was successful, but the room is fully booked. You are on the waiting list at position ${queuePosition}.`,
-            data: { bookingId, roomId: room.id, queuePosition },
+            type: "HOSTEL_PAYMENT_CONFIRMED",
+            title: "Hostel payment confirmed",
+            message: `Your payment was successful. You were allocated ${bedAssignment}.`,
+            data: { bookingId, roomId: room.id, bedAssignment, allocatedRoomNumber },
           });
         });
 
@@ -193,24 +184,13 @@ export const stripeWebhook = async (req: Request, res: Response) => {
     const emailData = bookingEmailData as BookingEmailData | null;
     if (emailData?.userEmail) {
       try {
-        if (emailData.status === "CONFIRMED") {
-          const emailContent = bookingConfirmationEmail(
-            emailData.fullName,
-            emailData.roomName,
-            emailData.checkIn?.toDateString() ?? "",
-            emailData.checkOut?.toDateString() ?? "",
-          );
-          await sendEmail(emailData.userEmail, emailContent.subject, emailContent);
-        } else {
-          const emailContent = bookingWaitlistEmail(
-            emailData.fullName,
-            emailData.roomName,
-            emailData.queuePosition ?? 0,
-            emailData.checkIn?.toDateString() ?? "",
-            emailData.checkOut?.toDateString() ?? "",
-          );
-          await sendEmail(emailData.userEmail, emailContent.subject, emailContent);
-        }
+        const emailContent = bookingConfirmationEmail(
+          emailData.fullName,
+          emailData.roomName,
+          "Approved hostel application",
+          `Room allocation: ${emailData.allocation ?? emailData.roomName}`,
+        );
+        await sendEmail(emailData.userEmail, emailContent.subject, emailContent);
       } catch (mailError) {
         console.error("Failed to send booking status email:", mailError);
       }

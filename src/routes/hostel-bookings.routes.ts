@@ -5,6 +5,7 @@ import {
   cancelBooking,
   getBookings,
   getBookingById,
+  getApplicationData,
   changeBookingStatus,
   getWaitingList,
   getHostelReports,
@@ -16,6 +17,7 @@ const router = Router();
 
 router.get("/", authenticate, getBookings);
 router.get("/waiting-list", authenticate, getWaitingList);
+router.get("/application-data", authenticate, getApplicationData);
 router.get("/reports/platform", authenticate, getPlatformReports);
 router.get("/reports/hostel/:hostelId", authenticate, getHostelReports);
 router.get("/:id", authenticate, getBookingById);
