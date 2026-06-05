@@ -140,6 +140,8 @@ model Room {
   category      RoomCategory
   capacity      Int
   availableBeds Int
+  roomNumberStart Int?
+  roomNumberEnd   Int?
   price         Float
   description   String?
   amenities     String[]     @default([])
@@ -164,6 +166,7 @@ model Booking {
   stripePaymentIntentId String?
   stripeChargeId        String?
   receiptUrl            String?
+  allocatedRoomNumber   Int?
   queuePosition         Int?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt

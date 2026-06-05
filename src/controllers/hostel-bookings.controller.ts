@@ -2,6 +2,8 @@ import { prisma } from "../lib/prisma.js";
 import type { Request, Response } from "express";
 import stripe from "../config/stripe.js";
 import { createNotification } from "../services/notifications.service.js";
+import { sendEmail } from "../config/email.js";
+import { bookingConfirmationEmail } from "../templates/email.templates.js";
 
 // Helper to log audit actions
 const logActivity = async (userId: string | undefined, action: string, details: string) => {
@@ -23,6 +25,104 @@ const logActivity = async (userId: string | undefined, action: string, details: 
     console.error("Failed to log activity:", err);
   }
 };
+
+const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const includeBookingDetails = {
+  user: { select: { id: true, fullName: true, email: true, phone: true } },
+  room: { include: { hostel: true } },
+  refundRequest: true,
+} as const;
+
+function paymentDeadlineFrom(updatedAt?: Date | null) {
+  return new Date((updatedAt?.getTime() ?? Date.now()) + PAYMENT_WINDOW_MS);
+}
+
+function nextAllocatedRoomNumber(room: any) {
+  if (room.roomNumberStart == null || room.roomNumberEnd == null) return null;
+  const paidSlots = Math.max(0, Number(room.capacity ?? 0) - Number(room.availableBeds ?? 0));
+  const rangeSize = Math.max(1, Number(room.roomNumberEnd) - Number(room.roomNumberStart) + 1);
+  return Number(room.roomNumberStart) + (paidSlots % rangeSize);
+}
+
+function publicBooking(booking: any) {
+  const roomName = booking.room?.name ?? "Room";
+  const roomNumber = booking.allocatedRoomNumber;
+  return {
+    ...booking,
+    paymentDeadline: booking.status === "PAYMENT_PENDING" ? paymentDeadlineFrom(booking.updatedAt) : null,
+    bookingReference: `UNI-${String(booking.id).slice(0, 8).toUpperCase()}`,
+    bedAssignment: booking.status === "COMPLETED" ? (roomNumber ? `Room ${roomNumber}` : `${roomName} - Allocated bed`) : null,
+    moveInDate: booking.status === "COMPLETED" ? booking.updatedAt : null,
+  };
+}
+
+async function approveNextPendingForRoom(roomId: string, tx: any) {
+  const room = await tx.room.findUnique({ where: { id: roomId } });
+  if (!room) return null;
+
+  const heldSlots = await tx.booking.count({
+    where: { roomId, status: "PAYMENT_PENDING" },
+  });
+
+  if (room.availableBeds - heldSlots <= 0) return null;
+
+  const next = await tx.booking.findFirst({
+    where: { roomId, status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    include: {
+      user: { select: { email: true, fullName: true } },
+      room: { include: { hostel: true } },
+    },
+  });
+
+  if (!next) return null;
+
+  const approved = await tx.booking.update({
+    where: { id: next.id },
+    data: { status: "PAYMENT_PENDING", paymentStatus: "PENDING" },
+    include: includeBookingDetails,
+  });
+
+  await createNotification({
+    userId: next.userId,
+    type: "HOSTEL_APPLICATION_APPROVED",
+    title: "Hostel application approved",
+    message: `Your application for ${next.room.hostel.name} was approved. Please pay within 24 hours to secure your room.`,
+    data: { bookingId: next.id, roomId },
+  });
+
+  return approved;
+}
+
+async function expirePaymentDeadlines() {
+  const cutoff = new Date(Date.now() - PAYMENT_WINDOW_MS);
+  const expired = await prisma.booking.findMany({
+    where: {
+      status: "PAYMENT_PENDING",
+      paymentStatus: { not: "PAID" },
+      updatedAt: { lt: cutoff },
+    },
+    select: { id: true, roomId: true, userId: true },
+  });
+
+  for (const booking of expired) {
+    await prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: { status: "REJECTED", paymentStatus: "FAILED" },
+      });
+      await createNotification({
+        userId: booking.userId,
+        type: "HOSTEL_PAYMENT_EXPIRED",
+        title: "Payment deadline expired",
+        message: "Your hostel application was rejected because payment was not completed within 24 hours.",
+        data: { bookingId: booking.id },
+      });
+      await approveNextPendingForRoom(booking.roomId, tx);
+    });
+  }
+}
 
 // ─── WAITING LIST PROMOTION TRIGGER ──────────────────────────────────────────
 // Promotes the first waitlisted student for a room when a confirmed booking is cancelled.
@@ -161,30 +261,25 @@ export const createBooking = async (req: Request, res: Response) => {
     }
 
     const booking = await prisma.booking.create({
-      data: {
-        userId,
-        roomId,
-        status: "PENDING",
-        paymentStatus: "PENDING",
-        totalAmount: room.price,
-      },
+      data: { userId, roomId, status: "PENDING", paymentStatus: "PENDING", totalAmount: room.price },
+      include: includeBookingDetails,
     });
 
-    await logActivity(userId, "APPLICATION_SUBMITTED", `Submitted accommodation application for room ${room.name} (${roomId})`);
+    await logActivity(userId, "APPLICATION_SUBMITTED", `Submitted one-bed accommodation application for ${room.category ?? room.name} (${roomId})`);
 
     // Notify Host
     await createNotification({
       userId: room.hostel.hostId,
       type: "APPLICATION_CREATED",
       title: "New Accommodation Application",
-      message: `A student submitted an application for room ${room.name} in ${room.hostel.name}`,
+      message: `A student submitted an application for one bed in ${room.category ?? room.name} at ${room.hostel.name}`,
       data: { bookingId: booking.id, roomId, studentId: userId },
     });
 
     return res.status(201).json({
       success: true,
-      message: "Application submitted successfully. Please proceed to payment.",
-      data: booking,
+      message: "Application submitted successfully. Please wait for host approval before payment.",
+      data: publicBooking(booking),
     });
   } catch (error) {
     console.error("createBooking error:", error);
@@ -193,6 +288,34 @@ export const createBooking = async (req: Request, res: Response) => {
 };
 
 // ─── PAY FOR ACCOMMODATION (Proceed to Payment) ──────────────────────────────
+export const getApplicationData = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const roomId = String(req.query.roomId ?? "");
+
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!roomId) return res.status(400).json({ success: false, message: "roomId is required" });
+
+    const [student, room] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { id: true, fullName: true, email: true, phone: true } }),
+      prisma.room.findUnique({ where: { id: roomId }, include: { hostel: true } }),
+    ]);
+
+    if (!room) return res.status(404).json({ success: false, message: "Room not found" });
+    if (room.hostel.verificationStatus !== "VERIFIED") {
+      return res.status(400).json({ success: false, message: "Hostel must be verified before applications can be submitted." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: { student, hostel: room.hostel, room },
+    });
+  } catch (error) {
+    console.error("getApplicationData error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 export const payBooking = async (req: Request, res: Response) => {
   try {
     const rawId = req.params.id;
@@ -223,8 +346,71 @@ export const payBooking = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: "Forbidden: Access denied" });
     }
 
-    if (booking.status !== "PENDING" && booking.status !== "PAYMENT_PENDING") {
+    if (booking.status !== "PAYMENT_PENDING") {
       return res.status(400).json({ success: false, message: `Payment cannot be processed for status: ${booking.status}` });
+    }
+
+    if (booking.updatedAt && paymentDeadlineFrom(booking.updatedAt).getTime() < Date.now()) {
+      await prisma.$transaction(async (tx) => {
+        await tx.booking.update({
+          where: { id: booking.id },
+          data: { status: "REJECTED", paymentStatus: "FAILED" },
+        });
+        await approveNextPendingForRoom(booking.roomId, tx);
+      });
+      return res.status(400).json({ success: false, message: "Payment deadline expired. This application was rejected." });
+    }
+
+    if (req.body?.paymentProof || req.body?.paymentRef) {
+      const updated = await prisma.$transaction(async (tx) => {
+        const latest = await tx.booking.findUnique({
+          where: { id: booking.id },
+          include: { room: { include: { hostel: true } }, user: { select: { fullName: true, email: true } } },
+        });
+        if (!latest) throw new Error("Booking not found");
+        if (latest.room.availableBeds <= 0) throw new Error("No beds are currently available for this room.");
+        const allocatedRoomNumber = nextAllocatedRoomNumber(latest.room);
+
+        await tx.room.update({
+          where: { id: latest.roomId },
+          data: { availableBeds: { decrement: 1 } },
+        });
+
+        return tx.booking.update({
+          where: { id: latest.id },
+          data: {
+            status: "COMPLETED",
+            paymentStatus: "PAID",
+            receiptUrl: String(req.body.paymentRef ?? req.body.paymentProof),
+            allocatedRoomNumber,
+          },
+          include: includeBookingDetails,
+        });
+      });
+
+      const emailContent = bookingConfirmationEmail(
+        updated.user?.fullName ?? "Student",
+        updated.room.name,
+        "Approved hostel application",
+        `Room allocation: ${updated.allocatedRoomNumber ? `Room ${updated.allocatedRoomNumber}` : updated.room.name}`,
+      );
+      sendEmail(updated.user?.email ?? "", emailContent.subject, emailContent).catch((mailError) => {
+        console.error("Failed to send hostel receipt email:", mailError);
+      });
+
+      await createNotification({
+        userId: updated.userId,
+        type: "HOSTEL_PAYMENT_CONFIRMED",
+        title: "Payment confirmed",
+        message: `Your hostel application is confirmed. You were allocated ${updated.allocatedRoomNumber ? `Room ${updated.allocatedRoomNumber}` : updated.room.name}.`,
+        data: { bookingId: updated.id, roomId: updated.roomId, allocatedRoomNumber: updated.allocatedRoomNumber },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment confirmed and room allocated.",
+        data: publicBooking(updated),
+      });
     }
 
     const successUrl = process.env["STRIPE_SUCCESS_URL"] ?? `${process.env["FRONTEND_URL"] ?? "http://localhost:3000"}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
@@ -259,6 +445,7 @@ export const payBooking = async (req: Request, res: Response) => {
     await prisma.booking.update({
       where: { id: booking.id },
       data: {
+        status: "PAYMENT_PENDING",
         paymentStatus: "PENDING",
         stripeCheckoutSessionId: session.id,
       },
@@ -386,6 +573,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
 // ─── GET ALL BOOKINGS ────────────────────────────────────────────────────────
 export const getBookings = async (req: Request, res: Response) => {
   try {
+    await expirePaymentDeadlines();
     const userId = req.user?.id;
     const userRole = req.user?.role;
     const { status, roomId, hostelId, page = "1", limit = "10" } = req.query;
@@ -442,9 +630,11 @@ export const getBookings = async (req: Request, res: Response) => {
       prisma.booking.count({ where: filters }),
     ]);
 
+    const data = bookings.map(publicBooking);
+
     return res.status(200).json({
       success: true,
-      data: bookings,
+      data,
       meta: {
         total,
         page: Number(page),
@@ -461,6 +651,7 @@ export const getBookings = async (req: Request, res: Response) => {
 // ─── GET SINGLE BOOKING BY ID ────────────────────────────────────────────────
 export const getBookingById = async (req: Request, res: Response) => {
   try {
+    await expirePaymentDeadlines();
     const rawId = req.params.id;
     const id = Array.isArray(rawId) ? rawId[0] : rawId;
     const userId = req.user?.id;
@@ -496,7 +687,10 @@ export const getBookingById = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: "Forbidden: Access denied" });
     }
 
-    return res.status(200).json({ success: true, data: booking });
+    return res.status(200).json({
+      success: true,
+      data: publicBooking(booking),
+    });
   } catch (error) {
     console.error("getBookingById error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
@@ -542,82 +736,62 @@ export const changeBookingStatus = async (req: Request, res: Response) => {
     }
 
     const oldStatus = booking.status;
-    const oldQueuePos = booking.queuePosition;
+    const targetStatus = status === "CONFIRMED" ? "PAYMENT_PENDING" : status;
 
-    if (oldStatus === status) {
+    if (oldStatus === targetStatus) {
       return res.status(200).json({ success: true, message: "Status is already set to target value", data: booking });
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      // 1. Update the booking status
-      const updatedBooking = await tx.booking.update({
-        where: { id },
-        data: {
-          status,
-          queuePosition: status === "WAITLISTED" ? booking.queuePosition : null,
-        },
-      });
-
-      // 2. Decrement beds if transitioning to CONFIRMED
-      if (status === "CONFIRMED" && oldStatus !== "CONFIRMED") {
-        await tx.room.update({
-          where: { id: booking.roomId },
-          data: { availableBeds: { decrement: 1 } },
+      if (targetStatus === "PAYMENT_PENDING") {
+        const room = await tx.room.findUnique({ where: { id: booking.roomId } });
+        if (!room) throw new Error("Room not found");
+        const heldSlots = await tx.booking.count({
+          where: {
+            roomId: booking.roomId,
+            status: "PAYMENT_PENDING",
+            id: { not: booking.id },
+          },
         });
-
-        // Shift waitlist positions if it was waitlisted
-        if (oldStatus === "WAITLISTED" && oldQueuePos !== null) {
-          await tx.booking.updateMany({
-            where: {
-              roomId: booking.roomId,
-              status: "WAITLISTED",
-              queuePosition: { gt: oldQueuePos },
-            },
-            data: { queuePosition: { decrement: 1 } },
-          });
+        if (room.availableBeds - heldSlots <= 0) {
+          throw new Error("No available bed slots remain for payment approval.");
         }
       }
 
-      // 3. Increment beds and promote if transitioning away from CONFIRMED
-      if (oldStatus === "CONFIRMED" && status !== "CONFIRMED") {
-        await tx.room.update({
-          where: { id: booking.roomId },
-          data: { availableBeds: { increment: 1 } },
-        });
+      const updatedBooking = await tx.booking.update({
+        where: { id },
+        data: {
+          status: targetStatus,
+          paymentStatus: targetStatus === "PAYMENT_PENDING" ? "PENDING" : booking.paymentStatus,
+          queuePosition: null,
+        },
+        include: includeBookingDetails,
+      });
 
-        await promoteFromWaitingList(booking.roomId, tx);
-      }
-
-      // 4. Update waitlist shifts if transitioning away from WAITLISTED (not to CONFIRMED)
-      if (oldStatus === "WAITLISTED" && status !== "CONFIRMED" && oldQueuePos !== null) {
-        await tx.booking.updateMany({
-          where: {
-            roomId: booking.roomId,
-            status: "WAITLISTED",
-            queuePosition: { gt: oldQueuePos },
-          },
-          data: { queuePosition: { decrement: 1 } },
-        });
+      if (oldStatus === "PAYMENT_PENDING" && ["REJECTED", "CANCELLED"].includes(targetStatus)) {
+        await approveNextPendingForRoom(booking.roomId, tx);
       }
 
       return updatedBooking;
     });
 
-    await logActivity(userId, "STATUS_MANUALLY_CHANGED", `Changed booking ${id} status from ${oldStatus} to ${status}`);
+    await logActivity(userId, "STATUS_MANUALLY_CHANGED", `Changed hostel application ${id} status from ${oldStatus} to ${targetStatus}`);
 
     // Send status notification
     await createNotification({
       userId: booking.userId,
       type: "BOOKING_STATUS_CHANGED",
-      title: "Booking Status Updated",
-      message: `Your booking status for room ${booking.room.name} in ${booking.room.hostel.name} has been updated to ${status}.`,
-      data: { bookingId: id, status },
+      title: targetStatus === "PAYMENT_PENDING" ? "Hostel application approved" : "Hostel application updated",
+      message: targetStatus === "PAYMENT_PENDING"
+        ? `Your application for ${booking.room.hostel.name} was approved. Please pay within 24 hours to secure your room.`
+        : `Your hostel application for room ${booking.room.name} in ${booking.room.hostel.name} has been updated to ${targetStatus}.`,
+      data: { bookingId: id, status: targetStatus },
     });
 
     return res.status(200).json({
       success: true,
       message: "Booking status updated successfully",
-      data: updated,
+      data: publicBooking(updated),
     });
   } catch (error) {
     console.error("changeBookingStatus error:", error);
